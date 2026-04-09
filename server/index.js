@@ -133,7 +133,7 @@ function maybeScheduleBot(roomCode) {
     } else if (s.phase === "discardAll" && s.pendingAction?.playerId === actorId) {
       const col = s.pendingAction.color;
       const eligible = s.players[actorId].hand
-        .filter(c => c.color === col && (c.type === "number" || c.type === "zero") && c.value !== "0")
+        .filter(c => c.color === col && c.type === "number")
         .map(c => c.id);
       r.state = processDiscardAll(s, actorId, eligible);
     } else if (s.phase === "roulette" && s.pendingAction?.initiator === actorId) {

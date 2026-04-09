@@ -18,8 +18,9 @@ function createDeck() {
   for (const c of COLORS) {
     // 2x each number 0-9
     for (let n = 0; n <= 9; n++) {
-      d.push(mk(c, String(n), n === 0 ? "zero" : "number"));
-      d.push(mk(c, String(n), n === 0 ? "zero" : "number"));
+      const t = n === 0 ? "zero" : "number";
+      d.push(mk(c, String(n), t));
+      d.push(mk(c, String(n), t));
     }
     // 3x skip, 3x reverse, 3x draw2
     for (const a of ["skip", "reverse", "draw2"]) {
@@ -274,7 +275,7 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   if (newHand.length === 0) {
     const lastCard = playedCards[playedCards.length - 1];
     // Can win on any plain number (1-9); cannot win on 0, action, or wild
-    const canWin = lastCard.type === "number" && lastCard.value !== "0";
+    const canWin = lastCard.type === "number";
 
     if (canWin) {
       return { ...ns, winner: playerId, phase: "end", log: [...ns.log, `🏆 ${player.name} wins!`] };
@@ -444,8 +445,7 @@ function processDiscardAll(state, playerId, cardIds) {
   const toDiscard = player.hand.filter(c =>
     cardIds.includes(c.id) &&
     c.color === color &&
-    (c.type === "number" || c.type === "zero") &&
-    c.value !== "0"
+    c.type === "number"
   );
   const newHand = player.hand.filter(c => !toDiscard.map(x => x.id).includes(c.id));
 
