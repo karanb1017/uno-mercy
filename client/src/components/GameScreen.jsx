@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import CardEl, { COLOR_MAP, cardLabel } from "./CardEl";
 import ColorPicker from "./ColorPicker";
-import SwapModal from "./SwapModal";
 import DiscardAllModal from "./DiscardAllModal";
 import RouletteModal from "./RouletteModal";
 
@@ -110,7 +109,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       if (card.color === color && (card.value === "skip" || card.value === "reverse" || card.value === "skipAll")) return true;
       return false;
     }
-    if (card.type === "wild" || card.type === "wildDraw" || card.type === "wildReverseDraw") return true;
+    if (card.type === "wildDraw" || card.type === "wildReverseDraw") return true;
     if (card.color === color) return true;
     if (card.value === top.value) return true;
     return false;
@@ -135,7 +134,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     } else {
       // First tap = select
       // Allow multi-select of same number
-      if (card.type === "number" || card.type === "seven" || card.type === "zero") {
+      if (card.type === "number" || card.type === "zero") {
         if (selected.length > 0) {
           const firstCard = me.hand.find(c => c.id === selected[0]);
           if (firstCard?.value === card.value && firstCard?.type === card.type) {
@@ -152,7 +151,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     if (cardIds.length === 0) return;
     const cards = me.hand.filter(c => cardIds.includes(c.id));
     const needsColor = cards.some(c =>
-      c.type === "wild" || c.type === "wildDraw" ||
+      c.type === "wildDraw" ||
       c.type === "wildReverseDraw" || c.value === "roulette"
     );
     if (needsColor) {
@@ -174,10 +173,6 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     if (hasForcedPlay) return;
     socket.emit("drawCard", { roomCode });
     setSelected([]);
-  }
-
-  function handleSwap(targetId) {
-    socket.emit("swapHands", { roomCode, targetId });
   }
 
   function handleDiscardAll(cardIds) {
@@ -213,7 +208,6 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   }
 
   const isRoulette = state.phase === "roulette";
-  const isSwap = state.phase === "swapHands" && state.pendingAction?.playerId === myIndex;
   const isDiscardAll = state.phase === "discardAll" && state.pendingAction?.playerId === myIndex;
 
   const opponents = state.players.filter((_, i) => i !== myIndex);
@@ -231,9 +225,6 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       {/* Modals */}
       {pendingWild && (
         <ColorPicker onPick={handleColorChosen} exclude={getColorExclusions()} />
-      )}
-      {isSwap && (
-        <SwapModal players={state.players} myId={myIndex} onSwap={handleSwap} />
       )}
       {isDiscardAll && (
         <DiscardAllModal

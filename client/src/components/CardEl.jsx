@@ -12,8 +12,8 @@ export function cardLabel(card) {
   const m = {
     draw2: "+2", draw4: "+4", draw6: "+6", draw10: "+10",
     reverseDraw4: "R+4", skip: "⊘", reverse: "↺",
-    skipAll: "⊘⊘", discardAll: "DA", wild: "W",
-    roulette: "??", "7": "7", "0": "0",
+    skipAll: "⊘⊘", discardAll: "DA",
+    roulette: "??", "0": "0",
   };
   return m[card.value] || card.value;
 }
@@ -75,7 +75,7 @@ export default function CardEl({
   const effectiveColor = card.color === "wild" ? (chosenColor || "wild") : card.color;
   const cm = COLOR_MAP[effectiveColor] || COLOR_MAP.wild;
   const lbl = cardLabel(card);
-  const isWild = card.type === "wild" || card.type === "wildDraw" || card.type === "wildReverseDraw" || card.value === "roulette";
+  const isWild = card.type === "wildDraw" || card.type === "wildReverseDraw" || card.value === "roulette";
   const fontSize = lbl.length > 3 ? size * 0.26 : size * 0.38;
 
   return (

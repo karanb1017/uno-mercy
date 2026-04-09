@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const {
   initGame, processPlay, processDraw,
-  processSwap, processDiscardAll, processRoulette,
+  processDiscardAll, processRoulette,
   getPlayerView, shuffle, canPlayCard, getDrawStrength,
 } = require("./gameEngine");
 
@@ -89,7 +89,7 @@ function computeBotMove(state, botIdx) {
   }
 
   const numGroups = {};
-  for (const c of playable.filter(c => c.type === "number" || c.type === "seven" || c.type === "zero")) {
+  for (const c of playable.filter(c => c.type === "number" || c.type === "zero")) {
     if (!numGroups[c.value]) numGroups[c.value] = [];
     numGroups[c.value].push(c);
   }
@@ -99,11 +99,11 @@ function computeBotMove(state, botIdx) {
   const pick =
     playable.find(c => c.type === "number") ||
     playable.find(c => c.type === "action" && c.value !== "discardAll" && c.value !== "roulette") ||
-    playable.find(c => c.type === "seven" || c.type === "zero") ||
+    playable.find(c => c.type === "zero") ||
     playable.find(c => getDrawStrength(c) > 0) ||
     playable[0];
 
-  const needsColor = pick.type === "wild" || pick.type === "wildDraw" || pick.type === "wildReverseDraw" || pick.value === "roulette";
+  const needsColor = pick.type === "wildDraw" || pick.type === "wildReverseDraw" || pick.value === "roulette";
   return { draw: false, cardIds: [pick.id], chosenColor: needsColor ? getBotBestColor(hand) : null };
 }
 
@@ -114,7 +114,6 @@ function maybeScheduleBot(roomCode) {
 
   let actorId = null;
   if (state.phase === "play") actorId = state.currentPlayer;
-  else if (state.phase === "swapHands") actorId = state.pendingAction?.playerId;
   else if (state.phase === "discardAll") actorId = state.pendingAction?.playerId;
   else if (state.phase === "roulette") actorId = state.pendingAction?.initiator;
 
@@ -131,14 +130,10 @@ function maybeScheduleBot(roomCode) {
       let ns = move.draw ? processDraw(s, actorId) : processPlay(s, actorId, move.cardIds, move.chosenColor);
       if (ns?.error) ns = processDraw(s, actorId);
       if (!ns?.error) r.state = ns;
-    } else if (s.phase === "swapHands" && s.pendingAction?.playerId === actorId) {
-      const targets = s.players.filter((p, i) => !p.eliminated && i !== actorId);
-      const target = targets.sort((a, b) => b.hand.length - a.hand.length)[0];
-      r.state = processSwap(s, actorId, target?.id ?? 0);
     } else if (s.phase === "discardAll" && s.pendingAction?.playerId === actorId) {
       const col = s.pendingAction.color;
       const eligible = s.players[actorId].hand
-        .filter(c => c.color === col && c.type === "number" && c.value !== "0" && c.value !== "7")
+        .filter(c => c.color === col && c.type === "number")
         .map(c => c.id);
       r.state = processDiscardAll(s, actorId, eligible);
     } else if (s.phase === "roulette" && s.pendingAction?.initiator === actorId) {
@@ -256,18 +251,6 @@ io.on("connection", (socket) => {
 
     room.state = result;
     clearTurnTimer(roomCode);
-    broadcastRoom(roomCode);
-    maybeScheduleBot(roomCode);
-  });
-
-  // ── Swap hands (7 card) ─────────────────────────────────
-  socket.on("swapHands", ({ roomCode, targetId }) => {
-    const room = rooms[roomCode];
-    if (!room?.state || room.state.phase !== "swapHands") return;
-    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
-    if (playerIdx !== room.state.pendingAction?.playerId) return;
-
-    room.state = processSwap(room.state, playerIdx, targetId);
     broadcastRoom(roomCode);
     maybeScheduleBot(roomCode);
   });

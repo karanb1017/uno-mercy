@@ -66,7 +66,7 @@ export default function HomeScreen({ onCreateRoom, onJoinRoom, connecting }) {
           color: "#818cf8", letterSpacing: 10, marginTop: 4,
         }}>MERCY</div>
         <div style={{ color: "#4b5563", fontSize: 12, marginTop: 8 }}>
-          132-card No Mercy deck · Private rooms · Play with friends
+          168-card No Mercy deck · Private rooms · Play with friends
         </div>
       </div>
 

@@ -4,7 +4,7 @@ import CardEl, { COLOR_MAP } from "./CardEl";
 export default function DiscardAllModal({ hand, color, onConfirm, onSkip }) {
   const [sel, setSel] = useState([]);
   const eligible = hand.filter(c =>
-    c.color === color && c.type === "number" && c.value !== "0" && c.value !== "7"
+    c.color === color && c.type === "number"
   );
 
   const toggle = (id) => setSel(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
@@ -30,7 +30,7 @@ export default function DiscardAllModal({ hand, color, onConfirm, onSkip }) {
           <span style={{ color: cm.bg, textTransform: "capitalize" }}>{color}</span>
         </div>
         <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 6 }}>
-          Select number cards to discard (no 0s, 7s, or action cards)
+          Select number cards to discard (no 0s or action cards)
         </div>
 
         {eligible.length === 0 ? (
