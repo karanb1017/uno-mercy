@@ -211,6 +211,11 @@ export default function App() {
         />
       )}
 
+      {screen === "lobby" && !lobby && (
+        <div style={{ minHeight: "100vh", background: "#080e18", display: "flex", alignItems: "center", justifyContent: "center", color: "#818cf8", fontFamily: "Nunito", fontSize: 18 }}>
+          Reconnecting...
+        </div>
+      )}
       {screen === "lobby" && lobby && (
         <LobbyScreen
           lobby={lobby}
@@ -233,6 +238,7 @@ export default function App() {
           roomCode={roomCode}
           socket={socket}
           onGameOver={handleGameOver}
+          onLeave={handleLeave}
         />
       )}
 
