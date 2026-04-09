@@ -5,51 +5,49 @@
 
 const COLORS = ["red", "blue", "green", "yellow"];
 
-// ─── DECK BUILDER (132 cards) ───────────────────────────────
-// Per color (×4): 1×0, 2×1-6, 2×7(seven), 2×8-9, 2×skip,
-//   2×reverse, 2×draw2, 1×skipAll, 1×discardAll  = 27 × 4 = 108
-// Wild (×4 each): wild, draw4, draw6, draw10, reverseDraw4,
-//   roulette  = 24   →  Total: 132 cards
+// ─── DECK BUILDER (168 cards) ───────────────────────────────
+// Per color (×4): 2×0-9, 3×skip, 2×skipAll, 3×reverse,
+//   3×draw2, 3×discardAll  = 34 × 4 = 136
+// Wild: 8×draw4, 4×draw6, 4×draw10, 8×reverseDraw4,
+//   8×roulette  = 32   →  Total: 168 cards
 function createDeck() {
   const d = [];
   let uid = 0;
   const mk = (color, value, type, extra = {}) => ({ id: uid++, color, value, type, ...extra });
 
   for (const c of COLORS) {
-    // 1x zero
-    d.push(mk(c, "0", "zero"));
-    // 2x 1-9 (skip 7 — handled separately as "seven" type)
-    for (let n = 1; n <= 9; n++) {
-      if (n === 7) continue;
-      d.push(mk(c, String(n), "number"));
-      d.push(mk(c, String(n), "number"));
+    // 2x each number 0-9
+    for (let n = 0; n <= 9; n++) {
+      d.push(mk(c, String(n), n === 0 ? "zero" : "number"));
+      d.push(mk(c, String(n), n === 0 ? "zero" : "number"));
     }
-    // 2x seven (triggers hand swap, cannot win)
-    d.push(mk(c, "7", "seven"));
-    d.push(mk(c, "7", "seven"));
-    // 2x each action
+    // 3x skip, 3x reverse, 3x draw2
     for (const a of ["skip", "reverse", "draw2"]) {
       d.push(mk(c, a, "action"));
       d.push(mk(c, a, "action"));
+      d.push(mk(c, a, "action"));
     }
-    // 1x skip all
+    // 2x skip all
     d.push(mk(c, "skipAll", "action"));
-    // 1x discard all
+    d.push(mk(c, "skipAll", "action"));
+    // 3x discard all
+    d.push(mk(c, "discardAll", "action"));
+    d.push(mk(c, "discardAll", "action"));
     d.push(mk(c, "discardAll", "action"));
   }
 
-  // 4x wild
-  for (let i = 0; i < 4; i++) d.push(mk("wild", "wild", "wild"));
-  // 4x each wild draw
-  for (let i = 0; i < 4; i++) {
-    d.push(mk("wild", "draw4", "wildDraw", { draws: 4 }));
-    d.push(mk("wild", "draw6", "wildDraw", { draws: 6 }));
-    d.push(mk("wild", "draw10", "wildDraw", { draws: 10 }));
-    d.push(mk("wild", "reverseDraw4", "wildReverseDraw", { draws: 4 }));
-    d.push(mk("wild", "roulette", "roulette"));
-  }
+  // 8x wild draw 4
+  for (let i = 0; i < 8; i++) d.push(mk("wild", "draw4", "wildDraw", { draws: 4 }));
+  // 4x wild draw 6
+  for (let i = 0; i < 4; i++) d.push(mk("wild", "draw6", "wildDraw", { draws: 6 }));
+  // 4x wild draw 10
+  for (let i = 0; i < 4; i++) d.push(mk("wild", "draw10", "wildDraw", { draws: 10 }));
+  // 8x wild reverse draw 4
+  for (let i = 0; i < 8; i++) d.push(mk("wild", "reverseDraw4", "wildReverseDraw", { draws: 4 }));
+  // 8x wild color roulette
+  for (let i = 0; i < 8; i++) d.push(mk("wild", "roulette", "roulette"));
 
-  return d; // 132 cards
+  return d; // 168 cards
 }
 
 function shuffle(arr) {
@@ -137,7 +135,7 @@ function canPlayCard(card, state) {
   }
 
   // Normal turn
-  if (card.type === "wild" || card.type === "wildDraw" ||
+  if (card.type === "wildDraw" ||
       card.type === "wildReverseDraw" || card.value === "roulette") return true;
   if (card.color === color) return true;
   if (card.value === top.value) return true;
@@ -155,8 +153,8 @@ function canMultiPlay(cards, state) {
 
   const first = cards[0];
 
-  // Same numeric value across any colors (numbers, sevens, zeros)
-  const numericTypes = ["number", "seven", "zero"];
+  // Same numeric value across any colors (numbers, zeros)
+  const numericTypes = ["number", "zero"];
   if (numericTypes.includes(first.type) && cards.every(c => c.value === first.value)) {
     return canPlayCard(first, state);
   }
@@ -213,7 +211,6 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   let needsColorPick = false;
   let hasRoulette = false;
   let hasDiscardAll = false;
-  let hasSwap = false;
   let hasZero = false;
   let discardAllColor = null;
   let chainRequiredDraw = ns.chainRequiredDraw || 0;
@@ -252,17 +249,12 @@ function processPlay(state, playerId, cardIds, chosenColor) {
     } else if (card.value === "skipAll") {
       hasSkipAll = true;
       if (wasChainActive) hasSavingAction = true;
-    } else if (card.value === "wild") {
-      finalColor = chosenColor || finalColor;
-      needsColorPick = true;
     } else if (card.value === "roulette") {
       hasRoulette = true;
       finalColor = chosenColor || finalColor;
     } else if (card.value === "discardAll") {
       hasDiscardAll = true;
       discardAllColor = card.color;
-    } else if (card.value === "7") {
-      hasSwap = true;
     } else if (card.value === "0") {
       hasZero = true;
     }
@@ -281,10 +273,8 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   // ── Win condition check ───────────────────────────────────
   if (newHand.length === 0) {
     const lastCard = playedCards[playedCards.length - 1];
-    const isNumberCard = (lastCard.type === "number" || lastCard.type === "seven" || lastCard.type === "zero") &&
-      lastCard.value !== "0" && lastCard.value !== "7";
-    // Actually per rules: must be plain number (not 0, not 7, not action)
-    const canWin = lastCard.type === "number";
+    // Can win on any plain number (1-9); cannot win on 0, action, or wild
+    const canWin = lastCard.type === "number" && lastCard.value !== "0";
 
     if (canWin) {
       return { ...ns, winner: playerId, phase: "end", log: [...ns.log, `🏆 ${player.name} wins!`] };
@@ -338,15 +328,6 @@ function processPlay(state, playerId, cardIds, chosenColor) {
       ...ns,
       phase: "discardAll",
       pendingAction: { type: "discardAll", color: discardAllColor, playerId }
-    };
-  }
-
-  // 7 = swap hands
-  if (hasSwap && newHand.length > 0) {
-    return {
-      ...ns,
-      phase: "swapHands",
-      pendingAction: { type: "swap", playerId }
     };
   }
 
@@ -463,9 +444,8 @@ function processDiscardAll(state, playerId, cardIds) {
   const toDiscard = player.hand.filter(c =>
     cardIds.includes(c.id) &&
     c.color === color &&
-    c.type === "number" &&
-    c.value !== "0" &&
-    c.value !== "7"
+    (c.type === "number" || c.type === "zero") &&
+    c.value !== "0"
   );
   const newHand = player.hand.filter(c => !toDiscard.map(x => x.id).includes(c.id));
 
@@ -583,8 +563,8 @@ function cardDisplayName(card) {
   const m = {
     draw2: "+2", draw4: "+4", draw6: "+6", draw10: "+10",
     reverseDraw4: "R+4", skip: "Skip", reverse: "Reverse",
-    skipAll: "SkipAll", discardAll: "DiscardAll", wild: "Wild",
-    roulette: "Roulette", "7": "Seven", "0": "Zero",
+    skipAll: "SkipAll", discardAll: "DiscardAll",
+    roulette: "Roulette", "0": "Zero",
   };
   const label = m[card.value] || card.value;
   return card.color !== "wild" ? `${label}(${card.color})` : label;
@@ -594,7 +574,6 @@ module.exports = {
   initGame,
   processPlay,
   processDraw,
-  processSwap,
   processDiscardAll,
   processRoulette,
   getPlayerView,
