@@ -1,0 +1,86 @@
+:root {
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red-dark: #991b1b;
+  --blue-dark: #1d4ed8;
+  --green-dark: #15803d;
+  --yellow-dark: #a16207;
+  --surface: #111827;
+  --surface2: #1f2937;
+  --surface3: #374151;
+  --border: #374151;
+  --text: #f9fafb;
+  --text2: #9ca3af;
+  --accent: #818cf8;
+  --accent2: #6366f1;
+}
+
+* { box-sizing: border-box; }
+
+button {
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.1s;
+}
+button:active { transform: scale(0.96); }
+button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+input {
+  font-family: 'Nunito', sans-serif;
+  outline: none;
+}
+
+.glow-red { box-shadow: 0 0 20px rgba(239,68,68,0.4); }
+.glow-blue { box-shadow: 0 0 20px rgba(59,130,246,0.4); }
+.glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.4); }
+.glow-yellow { box-shadow: 0 0 20px rgba(234,179,8,0.4); }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+  100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+@keyframes deal-in {
+  from { transform: translateY(-40px) scale(0.8); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.card-deal { animation: deal-in 0.3s ease forwards; }
+.slide-up { animation: slide-up 0.3s ease forwards; }
+.float { animation: float 3s ease-in-out infinite; }
+.bounce-in { animation: bounce-in 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+
+/* Mobile safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
