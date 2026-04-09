@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import socket from "./socket";
 import HomeScreen from "./components/HomeScreen";
 import LobbyScreen from "./components/LobbyScreen";
@@ -16,7 +16,11 @@ export default function App() {
   const [lobby, setLobby] = useState(null);
   const [gameState, setGameState] = useState(null);
 
-  // Connect socket on mount
+  // Track current screen in a ref to avoid stale closures in the socket useEffect
+  const screenRef = useRef(screen);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
+  // Connect socket on mount and register all listeners once (empty dependency array)
   useEffect(() => {
     socket.connect();
 
@@ -36,9 +40,6 @@ export default function App() {
 
     socket.on("lobbyUpdate", (data) => {
       setLobby(data);
-      if (data.gameStarted && screen === "lobby") {
-        // game will start via gameState
-      }
     });
 
     socket.on("gameState", (state) => {
@@ -47,7 +48,7 @@ export default function App() {
       setGameState(state);
       if (state.phase === "end") {
         setScreen("gameover");
-      } else if (screen !== "game") {
+      } else if (screenRef.current !== "game") {
         setScreen("game");
       }
     });
@@ -76,7 +77,30 @@ export default function App() {
       socket.off("hostTransferred");
       socket.off("error");
     };
-  }, [screen]);
+  }, []); // ← empty dependency array: register listeners only once
+
+  // Attempt to rejoin from saved session on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("uno_session");
+    if (saved) {
+      try {
+        const { roomCode: savedRoomCode, name, isHost: wasHost } = JSON.parse(saved);
+        socket.emit("rejoinRoom", { name, roomCode: savedRoomCode }, (res) => {
+          if (res.error) {
+            localStorage.removeItem("uno_session");
+            setScreen("home");
+          } else {
+            setMyName(name);
+            setRoomCode(savedRoomCode);
+            setIsHost(res.isHost);
+            setScreen("lobby");
+          }
+        });
+      } catch {
+        localStorage.removeItem("uno_session");
+      }
+    }
+  }, []);
 
   function resetState() {
     setRoomCode("");
@@ -99,6 +123,7 @@ export default function App() {
       }
       setRoomCode(res.roomCode);
       setIsHost(true);
+      localStorage.setItem("uno_session", JSON.stringify({ roomCode: res.roomCode, name, isHost: true }));
       setScreen("lobby");
     });
   }
@@ -115,6 +140,7 @@ export default function App() {
       }
       setRoomCode(res.roomCode);
       setIsHost(false);
+      localStorage.setItem("uno_session", JSON.stringify({ roomCode: res.roomCode, name, isHost: false }));
       setScreen("lobby");
     });
   }
@@ -138,6 +164,7 @@ export default function App() {
   }
 
   function handleLeave() {
+    localStorage.removeItem("uno_session");
     socket.disconnect();
     socket.connect();
     resetState();

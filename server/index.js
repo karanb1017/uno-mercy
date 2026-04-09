@@ -412,6 +412,31 @@ io.on("connection", (socket) => {
     broadcastRoom(roomCode);
   });
 
+  // ── Rejoin room (after browser refresh) ────────────────
+  socket.on("rejoinRoom", ({ name, roomCode }, callback) => {
+    const room = rooms[roomCode];
+    if (!room) return callback({ error: "Room no longer exists" });
+
+    const existingPlayer = room.players.find(p => p.name === name && !p.isBot);
+    if (existingPlayer) {
+      const oldSocketId = existingPlayer.socketId;
+      existingPlayer.socketId = socket.id;
+      socket.join(roomCode);
+      socket.data.roomCode = roomCode;
+      socket.data.name = name;
+
+      if (room.host === oldSocketId) {
+        room.host = socket.id;
+      }
+
+      const isHost = room.host === socket.id;
+      callback({ success: true, isHost });
+      broadcastRoom(roomCode);
+    } else {
+      callback({ error: "Player not found in room" });
+    }
+  });
+
   // ── Disconnect ──────────────────────────────────────────
   socket.on("disconnect", () => {
     console.log("Disconnected:", socket.id);
@@ -454,3 +479,15 @@ httpServer.listen(PORT, () => {
   console.log(`✅ UNO Mercy server running on port ${PORT}`);
   console.log(`🔑 Admin password: ${ADMIN_PASSWORD}`);
 });
+
+// ─── KEEP-ALIVE PING (Render free tier) ───────────────────────
+// Render's free tier sleeps after 15 minutes of inactivity.
+// Ping the health endpoint every 10 minutes to prevent cold starts.
+const SERVER_URL_SELF = process.env.RENDER_EXTERNAL_URL || null;
+if (SERVER_URL_SELF) {
+  setInterval(() => {
+    fetch(`${SERVER_URL_SELF}/health`).catch((err) => {
+      console.error("Keep-alive ping failed:", err.message);
+    });
+  }, 10 * 60 * 1000);
+}
