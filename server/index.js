@@ -9,7 +9,7 @@ const {
 } = require("./gameEngine");
 
 // ─── CONFIG ──────────────────────────────────────────────────
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "mercy2024";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "flavours";
 const PORT = process.env.PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL || "*";
 
