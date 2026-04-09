@@ -5,7 +5,7 @@ import SwapModal from "./SwapModal";
 import DiscardAllModal from "./DiscardAllModal";
 import RouletteModal from "./RouletteModal";
 
-export default function GameScreen({ state, myIndex, isHost, roomCode, socket, onGameOver }) {
+export default function GameScreen({ state, myIndex, isHost, roomCode, socket, onGameOver, onLeave }) {
   const [selected, setSelected] = useState([]);
   const [pendingWild, setPendingWild] = useState(null);
   const [unoPressedTime, setUnoPressedTime] = useState(null);
@@ -25,6 +25,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   const me = state.players[myIndex];
   const isMyTurn = state.currentPlayer === myIndex && !me?.eliminated;
   const topCard = state.discard?.[state.discard.length - 1];
+  const hasForcedPlay = isMyTurn && state.phase === "play" && state.chainActive && state.drawStack > 0 && (me?.hand || []).some(c => canPlayCard(c));
   const cm = COLOR_MAP[state.currentColor] || COLOR_MAP.red;
 
   // Sync log
@@ -281,6 +282,14 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
             color: "#fff", border: "none", borderRadius: 8,
             padding: "4px 10px", fontSize: 12, fontFamily: "Nunito",
           }}>💬</button>
+          {onLeave && (
+            <button onClick={onLeave} style={{
+              background: "#7f1d1d", color: "#fca5a5",
+              border: "1px solid #991b1b", borderRadius: 8,
+              padding: "4px 10px", fontSize: 12, fontFamily: "Nunito", fontWeight: 700,
+              cursor: "pointer",
+            }}>✕ Exit</button>
+          )}
         </div>
       </div>
 
