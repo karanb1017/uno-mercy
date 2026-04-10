@@ -28,7 +28,20 @@ export default function DiscardAllModal({ hand, color, onConfirm, onSkip }) {
         boxShadow: `0 32px 80px rgba(0,0,0,0.7), 0 0 50px ${cm.glow}22, inset 0 1px 0 rgba(255,255,255,0.07)`,
         animation: "bounce-in 0.32s cubic-bezier(0.34,1.56,0.64,1) forwards",
         maxWidth: 440, width: "92%",
+        position: "relative",
       }}>
+        {/* Close / cancel button */}
+        <button onClick={onSkip} style={{
+          position: "absolute", top: 12, right: 14,
+          background: "rgba(255,255,255,0.06)", color: "#6b7280",
+          border: "1px solid rgba(255,255,255,0.1)", borderRadius: "50%",
+          width: 28, height: 28, fontSize: 14, lineHeight: 1,
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "background 0.15s, color 0.15s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.2)"; e.currentTarget.style.color = "#ef4444"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#6b7280"; }}
+        >✕</button>
         <div style={{ fontSize: 30, marginBottom: 8 }}>🗑️</div>
         <div style={{
           fontSize: 20, fontWeight: 800, marginBottom: 4,

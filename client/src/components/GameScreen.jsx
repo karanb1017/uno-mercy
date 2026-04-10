@@ -246,24 +246,45 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   // UNO catch target: a player who has 1 card and hasn't said UNO
   const catchTarget = state.players.find((p, i) => i !== myIndex && p.handCount === 1 && !p.saidUno && !p.eliminated);
 
+  // Circular table: position each player around a circle, me always at bottom (90°)
+  const N = state.players.length;
+  const getArenaPos = (playerIdx) => {
+    const k = (playerIdx - myIndex + N) % N;
+    const angleDeg = 90 + k * (360 / N);
+    const rad = (angleDeg * Math.PI) / 180;
+    return {
+      left: `${50 + 40 * Math.cos(rad)}%`,
+      top: `${50 + 40 * Math.sin(rad)}%`,
+    };
+  };
+
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(160deg,#07091a 0%,#0b1225 40%,#060e18 100%)",
+      background: "linear-gradient(160deg,#06030f 0%,#0e0a22 50%,#04060c 100%)",
       display: "flex", flexDirection: "column",
       fontFamily: "'Nunito', sans-serif", userSelect: "none",
       maxWidth: "100vw", overflow: "hidden", position: "relative",
     }}>
-      {/* Ambient glow behind everything */}
+      {/* Vivid color blobs — same as HomeScreen */}
+      <div style={{ position: "fixed", top: "-5%", right: "-5%", width: 380, height: 380, background: "radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 65%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0, animation: "blob-drift 11s ease-in-out infinite" }} />
+      <div style={{ position: "fixed", bottom: "0%", left: "-5%", width: 340, height: 340, background: "radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 65%)", filter: "blur(60px)", pointerEvents: "none", zIndex: 0, animation: "blob-drift 13s ease-in-out infinite reverse" }} />
+      <div style={{ position: "fixed", top: "40%", left: "0%", width: 260, height: 260, background: "radial-gradient(circle, rgba(34,197,94,0.14) 0%, transparent 65%)", filter: "blur(55px)", pointerEvents: "none", zIndex: 0, animation: "blob-drift 15s ease-in-out infinite 3s" }} />
+      <div style={{ position: "fixed", bottom: "25%", right: "2%", width: 240, height: 240, background: "radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 65%)", filter: "blur(50px)", pointerEvents: "none", zIndex: 0, animation: "blob-drift 12s ease-in-out infinite 1s reverse" }} />
+      {/* Ambient glow — stronger, reacts to current color */}
       <div style={{
         position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
-        background: `radial-gradient(ellipse 60% 40% at 50% 50%, ${cm.glow}18 0%, transparent 70%)`,
+        background: `radial-gradient(ellipse 55% 35% at 50% 50%, ${cm.glow}28 0%, transparent 70%)`,
         transition: "background 0.8s ease",
       }} />
 
       {/* ── Modals ─────────────────────────────────────────────────── */}
       {pendingWild && (
-        <ColorPicker onPick={handleColorChosen} exclude={getColorExclusions()} />
+        <ColorPicker
+          onPick={handleColorChosen}
+          onCancel={() => { setSelected(pendingWild || []); setPendingWild(null); }}
+          exclude={getColorExclusions()}
+        />
       )}
       {isRouletteColorPick && (
         <ColorPicker
@@ -298,9 +319,10 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
         position: "relative", zIndex: 10,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "8px 14px",
-        background: "rgba(8,14,28,0.85)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background: `linear-gradient(90deg, rgba(6,3,15,0.95) 0%, ${cm.bg}18 50%, rgba(6,3,15,0.95) 100%)`,
+        backdropFilter: "blur(14px)",
+        borderBottom: `1px solid ${cm.bg}33`,
+        transition: "background 0.6s, border-color 0.6s",
       }}>
         {/* Logo */}
         <div style={{
@@ -386,152 +408,53 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       {/* ── Main layout ─────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "8px 10px", gap: 8, position: "relative", zIndex: 1 }}>
 
-        {/* ── Opponents row ──────────────────────────────────────────── */}
+        {/* ── Circular Arena ─────────────────────────────────────────── */}
         <div style={{
-          display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4,
-          justifyContent: opponents.length <= 4 ? "center" : "flex-start",
-        }}>
-          {opponents.map(p => {
-            const isCurrent = state.currentPlayer === p.id;
-            return (
-              <div key={p.id} style={{
-                flexShrink: 0,
-                display: "flex", flexDirection: "column", alignItems: "center",
-                gap: 4, padding: "8px 10px",
-                borderRadius: 16,
-                background: isCurrent
-                  ? "rgba(59,130,246,0.12)"
-                  : "rgba(255,255,255,0.04)",
-                border: isCurrent
-                  ? "1.5px solid rgba(99,130,246,0.7)"
-                  : "1px solid rgba(255,255,255,0.07)",
-                minWidth: 68, maxWidth: 92,
-                transition: "all 0.35s cubic-bezier(.22,.68,0,1.2)",
-                boxShadow: isCurrent ? "0 0 22px rgba(59,130,246,0.25), inset 0 1px 0 rgba(255,255,255,0.08)" : "none",
-                position: "relative", overflow: "visible",
-              }}>
-                {/* Active turn sparkle ring */}
-                {isCurrent && !p.eliminated && (
-                  <div style={{
-                    position: "absolute", inset: -4, borderRadius: 20,
-                    border: "2px solid rgba(59,130,246,0.5)",
-                    animation: "spin-border 3s linear infinite",
-                    pointerEvents: "none",
-                  }} />
-                )}
-
-                {/* Avatar */}
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  background: p.eliminated
-                    ? "rgba(127,29,29,0.5)"
-                    : isCurrent
-                      ? "linear-gradient(135deg,#2563eb,#7c3aed)"
-                      : "linear-gradient(135deg,#1f2937,#374151)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14, fontWeight: 900, color: "#fff",
-                  boxShadow: isCurrent ? "0 0 14px rgba(99,102,241,0.5)" : "none",
-                  border: isCurrent ? "2px solid rgba(165,180,252,0.5)" : "2px solid transparent",
-                }}>
-                  {p.eliminated ? "💀" : p.name[0].toUpperCase()}
-                </div>
-
-                {/* Name */}
-                <div style={{
-                  color: p.eliminated ? "#4b5563" : isCurrent ? "#bfdbfe" : "#9ca3af",
-                  fontSize: 10, fontWeight: 700,
-                  maxWidth: 76, overflow: "hidden",
-                  textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>{p.name}{p.isBot ? " 🤖" : ""}</div>
-
-                {/* Card backs fan */}
-                {!p.eliminated && p.handCount > 0 && (
-                  <div style={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap", maxWidth: 80, marginTop: 2 }}>
-                    {Array.from({ length: Math.min(p.handCount, 7) }).map((_, i) => (
-                      <CardEl key={i} card={{ id: `back-${p.id}-${i}`, color: "wild", value: "?" }} faceDown size={12} />
-                    ))}
-                    {p.handCount > 7 && (
-                      <span style={{
-                        fontSize: 9, color: "#6b7280",
-                        background: "rgba(255,255,255,0.07)",
-                        borderRadius: 4, padding: "0 3px",
-                        lineHeight: "12px",
-                      }}>+{p.handCount - 7}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* UNO badge */}
-                {p.saidUno && !p.eliminated && (
-                  <div style={{
-                    background: "linear-gradient(135deg,#fbbf24,#f59e0b)",
-                    color: "#1c1917", fontSize: 9, fontWeight: 900,
-                    padding: "2px 7px", borderRadius: 6,
-                    boxShadow: "0 0 10px rgba(251,191,36,0.5)",
-                  }}>UNO!</div>
-                )}
-
-                {/* Turn badge */}
-                {isCurrent && !p.eliminated && (
-                  <div style={{
-                    background: "rgba(59,130,246,0.25)", color: "#93c5fd",
-                    fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
-                    border: "1px solid rgba(59,130,246,0.4)",
-                  }}>▶ TURN</div>
-                )}
-
-                {/* Catch! button */}
-                {catchWindowOpen && catchTarget?.id === p.id && (
-                  <button onClick={() => handleCatch(p.id)} style={{
-                    background: "linear-gradient(135deg,#ef4444,#dc2626)",
-                    color: "#fff", border: "none", borderRadius: 8,
-                    padding: "4px 10px", fontSize: 11, fontWeight: 900,
-                    fontFamily: "Nunito", cursor: "pointer",
-                    boxShadow: "0 0 14px rgba(239,68,68,0.6)",
-                    animation: "chain-pulse 0.5s ease infinite",
-                  }}>🎯 Caught!</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Felt table ─────────────────────────────────────────────── */}
-        <div style={{
-          flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-          gap: "clamp(18px,5vw,56px)",
-          background: "radial-gradient(ellipse 80% 90% at 50% 50%, #14532d 0%, #0c3a1e 55%, #061610 100%)",
+          position: "relative",
+          width: "100%",
+          maxWidth: 420,
+          aspectRatio: "1 / 1",
+          alignSelf: "center",
+          background: "radial-gradient(ellipse 85% 85% at 50% 50%, #1a4a2e 0%, #0f2e1b 55%, #070e09 100%)",
           borderRadius: 28,
-          border: `2px solid rgba(22,101,52,0.6)`,
-          padding: "20px 24px", position: "relative", minHeight: 170,
-          boxShadow: "0 10px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.3)",
+          border: "2px solid rgba(34,197,94,0.4)",
+          overflow: "visible",
+          flexShrink: 0,
+          boxShadow: "0 10px 40px rgba(0,0,0,0.6), 0 0 60px rgba(34,197,94,0.08), inset 0 1px 0 rgba(255,255,255,0.06)",
         }}>
-          {/* Felt stitching border */}
+          {/* Felt stitching */}
+          <div style={{ position: "absolute", inset: 6, borderRadius: 22, border: "1px dashed rgba(34,197,94,0.25)", pointerEvents: "none" }} />
+
+          {/* Center circle glow */}
           <div style={{
-            position: "absolute", inset: 6, borderRadius: 22,
-            border: "1px dashed rgba(22,101,52,0.35)",
-            pointerEvents: "none",
+            position: "absolute", left: "50%", top: "50%",
+            transform: "translate(-50%,-50%)",
+            width: "32%", aspectRatio: "1/1", borderRadius: "50%",
+            background: "radial-gradient(circle, #1e5e38 0%, #0e3320 70%)",
+            border: `2px solid ${cm.bg}66`,
+            boxShadow: `0 0 50px ${cm.glow}44, 0 0 100px rgba(34,197,94,0.12)`,
+            transition: "border-color 0.5s, box-shadow 0.5s",
           }} />
 
-          {/* Turn status floating chip */}
+          {/* Turn chip */}
           <div style={{
-            position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
-            display: "flex", alignItems: "center", gap: 6,
+            position: "absolute", top: "8%", left: "50%", transform: "translateX(-50%)",
+            zIndex: 4, whiteSpace: "nowrap",
           }}>
             {state.drawStack > 0 ? (
               <div style={{
-                background: "linear-gradient(135deg,rgba(127,29,29,0.9),rgba(153,27,27,0.9))",
+                background: "linear-gradient(135deg,rgba(127,29,29,0.95),rgba(153,27,27,0.95))",
                 backdropFilter: "blur(8px)",
-                color: "#fca5a5", borderRadius: 12, padding: "4px 14px",
-                fontSize: 13, fontWeight: 900,
+                color: "#fca5a5", borderRadius: 12, padding: "3px 12px",
+                fontSize: 12, fontWeight: 900,
                 border: "1px solid rgba(239,68,68,0.5)",
-                boxShadow: "0 0 16px rgba(239,68,68,0.35)",
-              }}>⚡ +{state.drawStack} draw chain</div>
+                boxShadow: "0 0 16px rgba(239,68,68,0.4)",
+              }}>⚡ +{state.drawStack} chain</div>
             ) : (
               <div style={{
-                background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)",
+                background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)",
                 color: isMyTurn ? "#6ee7b7" : "#6b7280",
-                borderRadius: 12, padding: "4px 12px", fontSize: 12, fontWeight: 700,
+                borderRadius: 12, padding: "3px 10px", fontSize: 11, fontWeight: 700,
                 border: isMyTurn ? "1px solid rgba(52,211,153,0.4)" : "1px solid rgba(255,255,255,0.07)",
               }}>
                 {isMyTurn ? "🎯 Your turn!" : `⏳ ${state.players[state.currentPlayer]?.name}'s turn`}
@@ -539,80 +462,205 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
             )}
           </div>
 
-          {/* Draw pile */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <div
-              onClick={isMyTurn && state.phase === "play" ? handleDraw : undefined}
-              style={{
-                cursor: isMyTurn && state.phase === "play" ? "pointer" : "default",
-                transform: "scale(1)", transition: "transform 0.15s",
-                borderRadius: 10,
-                filter: isMyTurn && state.phase === "play"
-                  ? "drop-shadow(0 0 14px rgba(99,102,241,0.7))"
-                  : "drop-shadow(0 4px 8px rgba(0,0,0,0.5))",
-              }}
-              onMouseEnter={e => { if (isMyTurn && state.phase === "play") e.currentTarget.style.transform = "scale(1.06)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
-            >
-              <CardEl card={{ id: "back-draw", color: "wild", value: "?" }} faceDown size={74} />
-            </div>
-            <div style={{
-              background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-              borderRadius: 8, padding: "2px 8px", color: "#4ade80",
-              fontSize: 10, fontWeight: 700, border: "1px solid rgba(74,222,128,0.2)",
-              whiteSpace: "nowrap",
-            }}>{state.deck?.length || 0} cards</div>
-          </div>
-
-          {/* VS separator glow dot */}
+          {/* ── Center: draw + discard ── */}
           <div style={{
-            width: 8, height: 8, borderRadius: "50%",
-            background: cm.bg, boxShadow: `0 0 16px ${cm.glow}, 0 0 32px ${cm.glow}44`,
-            flexShrink: 0,
-          }} />
-
-          {/* Discard pile */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            <div style={{
-              position: "relative",
-              filter: `drop-shadow(0 0 18px ${cm.glow}88)`,
-              transition: "filter 0.5s",
-            }}>
-              {topCard && <CardEl card={topCard} size={74} chosenColor={state.currentColor} />}
-              {state.drawStack > 0 && (
-                <div style={{
-                  position: "absolute", top: -10, right: -10,
-                  background: "linear-gradient(135deg,#ef4444,#dc2626)",
-                  color: "#fff", borderRadius: "50%",
-                  width: 26, height: 26,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 900,
-                  boxShadow: "0 0 12px rgba(239,68,68,0.6)",
-                  border: "2px solid rgba(255,255,255,0.2)",
-                }}>+{state.drawStack}</div>
-              )}
+            position: "absolute", left: "50%", top: "50%",
+            transform: "translate(-50%,-50%)",
+            display: "flex", gap: "clamp(8px,3%,20px)", alignItems: "center",
+            zIndex: 3,
+          }}>
+            {/* Draw pile */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div
+                onClick={isMyTurn && state.phase === "play" ? handleDraw : undefined}
+                style={{
+                  cursor: isMyTurn && state.phase === "play" ? "pointer" : "default",
+                  borderRadius: 8,
+                  filter: isMyTurn && state.phase === "play"
+                    ? "drop-shadow(0 0 12px rgba(99,102,241,0.7))"
+                    : "drop-shadow(0 3px 6px rgba(0,0,0,0.5))",
+                  transition: "transform 0.15s, filter 0.15s",
+                }}
+                onMouseEnter={e => { if (isMyTurn && state.phase === "play") e.currentTarget.style.transform = "scale(1.08)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+              >
+                <CardEl card={{ id: "back-draw", color: "wild", value: "?" }} faceDown size={56} />
+              </div>
+              <div style={{
+                background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "1px 6px",
+                color: "#4ade80", fontSize: 9, fontWeight: 700,
+                border: "1px solid rgba(74,222,128,0.2)",
+              }}>{state.deck?.length || 0}</div>
             </div>
-            <div style={{
-              background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-              borderRadius: 8, padding: "2px 8px",
-              color: cm.bg, fontSize: 10, fontWeight: 700,
-              border: `1px solid ${cm.bg}44`, whiteSpace: "nowrap",
-              textTransform: "capitalize",
-            }}>{state.currentColor} {state.direction === 1 ? "↻" : "↺"}</div>
-          </div>
-        </div>
 
+            {/* Glow dot */}
+            <div style={{
+              width: 7, height: 7, borderRadius: "50%",
+              background: cm.bg, boxShadow: `0 0 14px ${cm.glow}, 0 0 28px ${cm.glow}44`,
+              flexShrink: 0,
+            }} />
+
+            {/* Discard pile */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{
+                position: "relative",
+                filter: `drop-shadow(0 0 16px ${cm.glow}77)`,
+                transition: "filter 0.5s",
+              }}>
+                {topCard && <CardEl card={topCard} size={56} chosenColor={state.currentColor} />}
+                {state.drawStack > 0 && (
+                  <div style={{
+                    position: "absolute", top: -8, right: -8,
+                    background: "linear-gradient(135deg,#ef4444,#dc2626)",
+                    color: "#fff", borderRadius: "50%",
+                    width: 22, height: 22,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, fontWeight: 900,
+                    boxShadow: "0 0 10px rgba(239,68,68,0.6)",
+                    border: "2px solid rgba(255,255,255,0.2)",
+                  }}>+{state.drawStack}</div>
+                )}
+              </div>
+              <div style={{
+                background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "1px 6px",
+                color: cm.bg, fontSize: 9, fontWeight: 700,
+                border: `1px solid ${cm.bg}44`,
+                textTransform: "capitalize",
+              }}>{state.currentColor}</div>
+            </div>
+          </div>
+
+          {/* ── Player seats around the circle ── */}
+          {state.players.map((p, i) => {
+            const isMe = i === myIndex;
+            const isCurrent = state.currentPlayer === p.id;
+            const pos = getArenaPos(i);
+            return (
+              <div key={p.id} style={{
+                position: "absolute",
+                left: pos.left, top: pos.top,
+                transform: "translate(-50%,-50%)",
+                zIndex: 5,
+                display: "flex", flexDirection: "column", alignItems: "center",
+                gap: 2, padding: "6px 8px",
+                borderRadius: 14,
+                background: isMe
+                  ? "rgba(59,130,246,0.18)"
+                  : isCurrent
+                    ? "rgba(99,102,241,0.14)"
+                    : "rgba(0,0,0,0.45)",
+                border: isMe
+                  ? "1.5px solid rgba(96,165,250,0.6)"
+                  : isCurrent
+                    ? "1.5px solid rgba(99,102,241,0.55)"
+                    : "1px solid rgba(255,255,255,0.08)",
+                backdropFilter: "blur(8px)",
+                boxShadow: isMe
+                  ? "0 0 20px rgba(59,130,246,0.3)"
+                  : isCurrent
+                    ? "0 0 16px rgba(99,102,241,0.25)"
+                    : "none",
+                transition: "all 0.3s",
+                minWidth: 60,
+              }}>
+                {/* Spin ring for active player */}
+                {isCurrent && !p.eliminated && (
+                  <div style={{
+                    position: "absolute", inset: -4, borderRadius: 18,
+                    border: "2px solid rgba(99,102,241,0.5)",
+                    animation: "spin-border 3s linear infinite",
+                    pointerEvents: "none",
+                  }} />
+                )}
+
+                {/* Avatar */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: "50%",
+                  background: p.eliminated
+                    ? "rgba(127,29,29,0.5)"
+                    : isMe
+                      ? "linear-gradient(135deg,#1d4ed8,#6d28d9)"
+                      : isCurrent
+                        ? "linear-gradient(135deg,#2563eb,#7c3aed)"
+                        : "linear-gradient(135deg,#1f2937,#374151)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12, fontWeight: 900, color: "#fff",
+                  boxShadow: isCurrent ? "0 0 12px rgba(99,102,241,0.5)" : "none",
+                  border: isCurrent ? "2px solid rgba(165,180,252,0.4)" : isMe ? "2px solid rgba(96,165,250,0.4)" : "2px solid transparent",
+                  flexShrink: 0,
+                }}>
+                  {p.eliminated ? "💀" : isMe ? "★" : p.name[0].toUpperCase()}
+                </div>
+
+                {/* Name */}
+                <div style={{
+                  color: p.eliminated ? "#4b5563" : isMe ? "#93c5fd" : isCurrent ? "#bfdbfe" : "#9ca3af",
+                  fontSize: 9, fontWeight: 700,
+                  maxWidth: 68, overflow: "hidden",
+                  textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  textAlign: "center",
+                }}>{isMe ? "You" : p.name}{p.isBot ? " 🤖" : ""}</div>
+
+                {/* Card backs fan */}
+                {!p.eliminated && (
+                  <div style={{ display: "flex", gap: 1, justifyContent: "center", flexWrap: "wrap", maxWidth: 72 }}>
+                    {Array.from({ length: Math.min(p.handCount, 6) }).map((_, ji) => (
+                      <CardEl key={ji} card={{ id: `back-${p.id}-${ji}`, color: "wild", value: "?" }} faceDown size={10} />
+                    ))}
+                    {p.handCount > 6 && (
+                      <span style={{ fontSize: 8, color: "#6b7280", background: "rgba(255,255,255,0.07)", borderRadius: 3, padding: "0 2px", lineHeight: "10px" }}>
+                        +{p.handCount - 6}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Badges row */}
+                <div style={{ display: "flex", gap: 3, flexWrap: "wrap", justifyContent: "center" }}>
+                  {p.saidUno && !p.eliminated && (
+                    <div style={{
+                      background: "linear-gradient(135deg,#fbbf24,#f59e0b)",
+                      color: "#1c1917", fontSize: 8, fontWeight: 900,
+                      padding: "1px 5px", borderRadius: 5,
+                      boxShadow: "0 0 8px rgba(251,191,36,0.5)",
+                    }}>UNO!</div>
+                  )}
+                  {isCurrent && !p.eliminated && (
+                    <div style={{
+                      background: "rgba(59,130,246,0.3)", color: "#93c5fd",
+                      fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 5,
+                      border: "1px solid rgba(59,130,246,0.4)",
+                    }}>▶</div>
+                  )}
+                </div>
+
+                {/* Catch button */}
+                {catchWindowOpen && catchTarget?.id === p.id && (
+                  <button onClick={() => handleCatch(p.id)} style={{
+                    background: "linear-gradient(135deg,#ef4444,#dc2626)",
+                    color: "#fff", border: "none", borderRadius: 8,
+                    padding: "3px 8px", fontSize: 10, fontWeight: 900,
+                    fontFamily: "Nunito", cursor: "pointer",
+                    boxShadow: "0 0 12px rgba(239,68,68,0.6)",
+                    animation: "chain-pulse 0.5s ease infinite",
+                    marginTop: 2,
+                  }}>🎯 Catch!</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
         {/* ── My hand panel ──────────────────────────────────────────── */}
         <div style={{
-          background: "rgba(13,21,40,0.9)",
-          backdropFilter: "blur(12px)",
+          background: "rgba(10,6,24,0.92)",
+          backdropFilter: "blur(14px)",
           borderRadius: 22,
           border: isMyTurn
-            ? `1.5px solid rgba(59,130,246,0.6)`
-            : "1px solid rgba(255,255,255,0.07)",
+            ? `1.5px solid rgba(167,139,250,0.7)`
+            : "1px solid rgba(255,255,255,0.09)",
           padding: "12px 12px 10px",
           boxShadow: isMyTurn
-            ? "0 0 28px rgba(59,130,246,0.18), inset 0 1px 0 rgba(255,255,255,0.06)"
+            ? "0 0 32px rgba(139,92,246,0.22), inset 0 1px 0 rgba(255,255,255,0.07)"
             : "inset 0 1px 0 rgba(255,255,255,0.04)",
           transition: "border 0.4s, box-shadow 0.4s",
         }}>

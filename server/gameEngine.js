@@ -295,6 +295,13 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   // Reverse+4 rule: odd=reverse, even=no reverse
   if (reverseDraw4Count % 2 === 1) reverseCount++;
 
+  // 2-player rule: reverse acts as skip (don't flip direction, add a skip instead)
+  const aliveCountNow = getAlive(ns.players).length;
+  if (aliveCountNow === 2 && reverseCount % 2 === 1) {
+    skipCount++;
+    reverseCount--; // cancel out the odd reverse so the direction flip below is a no-op
+  }
+
   // Apply all reverses
   if (reverseCount % 2 === 1) dir = dir * -1;
 
