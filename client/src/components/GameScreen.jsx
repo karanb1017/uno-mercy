@@ -275,7 +275,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
             color: state.chainActive ? "#fca5a5" : "#6b7280",
             fontSize: 11, fontWeight: 700,
           }}>
-            {state.drawStack > 0 ? `+${state.drawStack} chain` : "132 deck"}
+            {state.drawStack > 0 ? `+${state.drawStack} chain` : "168 deck"}
           </div>
           <button onClick={() => setShowChat(s => !s)} style={{
             background: showChat ? "#4f46e5" : "#1f2937",

@@ -5,51 +5,56 @@
 
 const COLORS = ["red", "blue", "green", "yellow"];
 
-// ─── DECK BUILDER (132 cards) ───────────────────────────────
-// Per color (×4): 1×0, 2×1-6, 2×7(seven), 2×8-9, 2×skip,
-//   2×reverse, 2×draw2, 1×skipAll, 1×discardAll  = 27 × 4 = 108
-// Wild (×4 each): wild, draw4, draw6, draw10, reverseDraw4,
-//   roulette  = 24   →  Total: 132 cards
+// ─── DECK BUILDER (168 cards) ───────────────────────────────
+// Per color (×4):
+//   2×0(zero), 2×1-6(number), 2×7(seven/swap), 2×8-9(number)  = 20  → ×4 = 80
+//   3×skip, 3×reverse, 3×draw2, 2×skipAll, 3×discardAll        = 14  → ×4 = 56
+//   Subtotal color: 34 × 4 = 136
+// Wild: 8×draw4, 8×reverseDraw4, 4×draw6, 4×draw10, 8×roulette = 32
+// Total: 168 cards
 function createDeck() {
   const d = [];
   let uid = 0;
   const mk = (color, value, type, extra = {}) => ({ id: uid++, color, value, type, ...extra });
 
   for (const c of COLORS) {
-    // 1x zero
-    d.push(mk(c, "0", "zero"));
-    // 2x 1-9 (skip 7 — handled separately as "seven" type)
-    for (let n = 1; n <= 9; n++) {
-      if (n === 7) continue;
-      d.push(mk(c, String(n), "number"));
-      d.push(mk(c, String(n), "number"));
+    // 2x 0-9  (0 = zero type, 7 = seven type for swap, rest = number)
+    for (let rep = 0; rep < 2; rep++) {
+      d.push(mk(c, "0", "zero"));
+      for (let n = 1; n <= 9; n++) {
+        if (n === 7) d.push(mk(c, "7", "seven")); // triggers hand swap
+        else d.push(mk(c, String(n), "number"));
+      }
     }
-    // 2x seven (triggers hand swap, cannot win)
-    d.push(mk(c, "7", "seven"));
-    d.push(mk(c, "7", "seven"));
-    // 2x each action
+    // 3x skip, 3x reverse, 3x draw2
     for (const a of ["skip", "reverse", "draw2"]) {
       d.push(mk(c, a, "action"));
       d.push(mk(c, a, "action"));
+      d.push(mk(c, a, "action"));
     }
-    // 1x skip all
+    // 2x skip all
     d.push(mk(c, "skipAll", "action"));
-    // 1x discard all
+    d.push(mk(c, "skipAll", "action"));
+    // 3x discard all
+    d.push(mk(c, "discardAll", "action"));
+    d.push(mk(c, "discardAll", "action"));
     d.push(mk(c, "discardAll", "action"));
   }
 
-  // 4x wild
-  for (let i = 0; i < 4; i++) d.push(mk("wild", "wild", "wild"));
-  // 4x each wild draw
-  for (let i = 0; i < 4; i++) {
-    d.push(mk("wild", "draw4", "wildDraw", { draws: 4 }));
-    d.push(mk("wild", "draw6", "wildDraw", { draws: 6 }));
-    d.push(mk("wild", "draw10", "wildDraw", { draws: 10 }));
-    d.push(mk("wild", "reverseDraw4", "wildReverseDraw", { draws: 4 }));
-    d.push(mk("wild", "roulette", "roulette"));
+  // 8x draw4, 8x reverseDraw4
+  for (let i = 0; i < 8; i++) {
+    d.push(mk("wild", "draw4",       "wildDraw",        { draws: 4 }));
+    d.push(mk("wild", "reverseDraw4","wildReverseDraw",  { draws: 4 }));
   }
+  // 4x draw6, 4x draw10
+  for (let i = 0; i < 4; i++) {
+    d.push(mk("wild", "draw6",  "wildDraw", { draws: 6 }));
+    d.push(mk("wild", "draw10", "wildDraw", { draws: 10 }));
+  }
+  // 8x roulette
+  for (let i = 0; i < 8; i++) d.push(mk("wild", "roulette", "roulette"));
 
-  return d; // 132 cards
+  return d; // 168 cards
 }
 
 function shuffle(arr) {

@@ -173,7 +173,7 @@ export default function LobbyScreen({ lobby, isHost, myName, onStart, onKick, on
           <div style={{ width: 1, background: "#1f2937" }} />
           <div style={{ textAlign: "center" }}>
             <div style={{ color: "#818cf8", fontSize: 18, fontWeight: 800, fontFamily: "Fredoka One" }}>
-              132
+              168
             </div>
             <div style={{ color: "#6b7280", fontSize: 10, fontWeight: 700 }}>CARD DECK</div>
           </div>
