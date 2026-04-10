@@ -9,8 +9,28 @@ const PREVIEW_CARDS = [
   { id: "p5", color: "wild", value: "roulette", type: "roulette" },
 ];
 
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{
+        color: "#4b5563", fontSize: 10, fontWeight: 700,
+        letterSpacing: 1.5, display: "block", marginBottom: 6,
+      }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const inputBase = {
+  width: "100%", background: "rgba(255,255,255,0.05)",
+  border: "1.5px solid rgba(255,255,255,0.1)",
+  borderRadius: 12, padding: "12px 16px",
+  color: "#f9fafb", fontSize: 15, fontFamily: "Nunito",
+  outline: "none", boxSizing: "border-box", transition: "border 0.2s",
+};
+
 export default function HomeScreen({ onCreateRoom, onJoinRoom, connecting }) {
-  const [tab, setTab] = useState("join"); // "host" | "join"
+  const [tab, setTab] = useState("join");
   const [name, setName] = useState(() => {
     try { return localStorage.getItem("uno_name") || ""; } catch { return ""; }
   });
@@ -38,169 +58,203 @@ export default function HomeScreen({ onCreateRoom, onJoinRoom, connecting }) {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(160deg, #0a0f1a 0%, #1e1b4b 50%, #0a0f1a 100%)",
+      background: "linear-gradient(160deg,#070c18 0%,#0e1430 45%,#070c18 100%)",
       display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
       padding: "24px 16px",
       position: "relative", overflow: "hidden",
+      fontFamily: "Nunito, sans-serif",
     }}>
-      {/* Background blobs */}
-      <div style={{ position: "absolute", top: "10%", left: "5%", width: 300, height: 300,
-        background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
-        borderRadius: "50%", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "10%", right: "5%", width: 250, height: 250,
-        background: "radial-gradient(circle, rgba(239,68,68,0.1) 0%, transparent 70%)",
-        borderRadius: "50%", pointerEvents: "none" }} />
+      {/* Ambient blobs */}
+      <div style={{
+        position: "absolute", top: "8%", left: "0%", width: 420, height: 420,
+        background: "radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 65%)",
+        borderRadius: "50%", pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute", bottom: "5%", right: "0%", width: 360, height: 360,
+        background: "radial-gradient(circle, rgba(239,68,68,0.07) 0%, transparent 65%)",
+        borderRadius: "50%", pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        width: 600, height: 600,
+        background: "radial-gradient(ellipse, rgba(99,102,241,0.04) 0%, transparent 60%)",
+        borderRadius: "50%", pointerEvents: "none",
+      }} />
 
-      {/* Title */}
-      <div style={{ textAlign: "center", marginBottom: 28 }}>
+      {/* Logo */}
+      <div style={{ textAlign: "center", marginBottom: 24, position: "relative", zIndex: 1 }}>
         <div style={{
-          fontFamily: "Fredoka One", fontSize: "clamp(48px, 12vw, 80px)",
-          color: "#fff", letterSpacing: -2, lineHeight: 1,
-          textShadow: "0 0 40px rgba(99,102,241,0.5)",
-        }}>
-          UNO<span style={{ color: "#f59e0b" }}>⚡</span>
-        </div>
+          fontFamily: "'Fredoka One', cursive",
+          fontSize: "clamp(52px,13vw,86px)",
+          lineHeight: 1, letterSpacing: -2,
+          background: "linear-gradient(135deg,#e0e7ff 10%,#818cf8 50%,#c084fc 90%)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          filter: "drop-shadow(0 0 30px rgba(99,102,241,0.35))",
+        }}>UNO<span style={{
+          WebkitTextFillColor: "#f59e0b",
+          filter: "drop-shadow(0 0 20px rgba(245,158,11,0.6))",
+        }}>⚡</span></div>
         <div style={{
-          fontFamily: "Fredoka One", fontSize: "clamp(16px, 5vw, 22px)",
-          color: "#818cf8", letterSpacing: 10, marginTop: 4,
+          fontFamily: "'Fredoka One', cursive",
+          fontSize: "clamp(14px,4vw,20px)",
+          letterSpacing: "0.45em",
+          background: "linear-gradient(120deg,#818cf8,#c084fc)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          marginTop: 2,
         }}>MERCY</div>
-        <div style={{ color: "#4b5563", fontSize: 12, marginTop: 8 }}>
+        <div style={{ color: "#1f2a40", fontSize: 11, marginTop: 8, letterSpacing: 0.5 }}>
           168-card No Mercy deck · Private rooms · Play with friends
         </div>
       </div>
 
-      {/* Preview cards */}
-      <div style={{ display: "flex", marginBottom: 28, alignItems: "flex-end" }}>
+      {/* Preview card fan */}
+      <div style={{
+        display: "flex", marginBottom: 24, alignItems: "flex-end",
+        position: "relative", zIndex: 1,
+      }}>
         {PREVIEW_CARDS.map((c, i) => (
           <div key={c.id} style={{
-            transform: `rotate(${(i - 2) * 9}deg) translateY(${Math.abs(i - 2) * 8}px)`,
-            marginLeft: i > 0 ? -18 : 0, zIndex: i,
+            transform: `rotate(${(i - 2) * 10}deg) translateY(${Math.abs(i - 2) * 9}px)`,
+            marginLeft: i > 0 ? -20 : 0, zIndex: i + 1,
+            filter: `drop-shadow(0 4px 12px rgba(0,0,0,0.5))`,
             transition: "transform 0.3s",
           }}>
-            <CardEl card={c} size={52} />
+            <CardEl card={c} size={56} />
           </div>
         ))}
       </div>
 
-      {/* Card */}
+      {/* Main card */}
       <div style={{
-        background: "#111827", borderRadius: 24, padding: 28,
-        border: "1px solid #1f2937",
-        boxShadow: "0 25px 60px rgba(0,0,0,0.5)",
-        width: "100%", maxWidth: 400,
-        animation: "slide-up 0.4s ease forwards",
+        background: "rgba(9,15,30,0.92)", backdropFilter: "blur(20px)",
+        borderRadius: 28, padding: "28px 28px",
+        border: "1px solid rgba(255,255,255,0.09)",
+        boxShadow: "0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07)",
+        width: "100%", maxWidth: 410,
+        animation: "slide-up 0.4s cubic-bezier(.22,.68,0,1.2) forwards",
+        position: "relative", zIndex: 1,
       }}>
         {/* Tabs */}
-        <div style={{ display: "flex", background: "#1f2937", borderRadius: 14, padding: 4, marginBottom: 24 }}>
+        <div style={{
+          display: "flex", background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 16, padding: 4, marginBottom: 24,
+        }}>
           {[{ id: "join", label: "🎮 Join Game" }, { id: "host", label: "👑 Host Game" }].map(t => (
             <button key={t.id} onClick={() => { setTab(t.id); setError(""); }} style={{
-              flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
-              background: tab === t.id ? "#4f46e5" : "transparent",
-              color: tab === t.id ? "#fff" : "#6b7280",
-              fontWeight: 800, fontSize: 13, fontFamily: "Nunito",
-              boxShadow: tab === t.id ? "0 2px 8px rgba(79,70,229,0.4)" : "none",
-              transition: "all 0.2s",
+              flex: 1, padding: "11px 0", borderRadius: 12, border: "none",
+              background: tab === t.id
+                ? "linear-gradient(135deg,#4f46e5,#7c3aed)"
+                : "transparent",
+              color: tab === t.id ? "#fff" : "#4b5563",
+              fontWeight: 800, fontSize: 13, fontFamily: "Nunito", cursor: "pointer",
+              boxShadow: tab === t.id ? "0 2px 12px rgba(79,70,229,0.45)" : "none",
+              transition: "all 0.22s",
             }}>{t.label}</button>
           ))}
         </div>
 
-        {/* Name field (shared) */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ color: "#9ca3af", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6 }}>
-            YOUR NAME
-          </label>
-          <input value={name} onChange={e => { setName(e.target.value); try { localStorage.setItem("uno_name", e.target.value); } catch {} }} placeholder="Enter your name..."
-            maxLength={20}
-            style={{
-              width: "100%", background: "#1f2937", border: "1.5px solid #374151",
-              borderRadius: 12, padding: "12px 16px", color: "#f9fafb", fontSize: 15,
-              fontFamily: "Nunito", transition: "border 0.2s",
-            }}
-            onFocus={e => e.target.style.border = "1.5px solid #6366f1"}
-            onBlur={e => e.target.style.border = "1.5px solid #374151"}
+        {/* Name field */}
+        <Field label="YOUR NAME">
+          <input value={name}
+            onChange={e => { setName(e.target.value); try { localStorage.setItem("uno_name", e.target.value); } catch {} }}
+            placeholder="Enter your name…" maxLength={20}
+            style={inputBase}
+            onFocus={e => { e.target.style.border = "1.5px solid rgba(99,102,241,0.7)"; e.target.style.background = "rgba(99,102,241,0.08)"; }}
+            onBlur={e => { e.target.style.border = "1.5px solid rgba(255,255,255,0.1)"; e.target.style.background = "rgba(255,255,255,0.05)"; }}
           />
-        </div>
+        </Field>
 
         {tab === "join" && (
           <form onSubmit={handleJoin}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ color: "#9ca3af", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6 }}>
-                ROOM CODE
-              </label>
+            <Field label="ROOM CODE">
               <input value={roomCode} onChange={e => setRoomCode(e.target.value.toUpperCase())}
                 placeholder="e.g. WOLF" maxLength={4}
                 style={{
-                  width: "100%", background: "#1f2937", border: "1.5px solid #374151",
-                  borderRadius: 12, padding: "12px 16px", color: "#f9fafb",
-                  fontSize: 28, fontFamily: "Fredoka One", letterSpacing: 8, textAlign: "center",
-                  transition: "border 0.2s",
+                  ...inputBase,
+                  fontSize: 30, fontFamily: "'Fredoka One', cursive",
+                  letterSpacing: 10, textAlign: "center", padding: "14px 16px",
                 }}
-                onFocus={e => e.target.style.border = "1.5px solid #6366f1"}
-                onBlur={e => e.target.style.border = "1.5px solid #374151"}
+                onFocus={e => { e.target.style.border = "1.5px solid rgba(99,102,241,0.7)"; e.target.style.background = "rgba(99,102,241,0.08)"; }}
+                onBlur={e => { e.target.style.border = "1.5px solid rgba(255,255,255,0.1)"; e.target.style.background = "rgba(255,255,255,0.05)"; }}
               />
-            </div>
-            {error && <div style={{ color: "#ef4444", fontSize: 13, marginBottom: 12, textAlign: "center" }}>{error}</div>}
+            </Field>
+            {error && (
+              <div style={{
+                color: "#fca5a5", fontSize: 12, marginBottom: 12, textAlign: "center",
+                background: "rgba(239,68,68,0.1)", borderRadius: 8, padding: "6px 12px",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}>{error}</div>
+            )}
             <button type="submit" disabled={connecting} style={{
-              width: "100%", background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-              color: "#fff", border: "none", borderRadius: 14, padding: "14px",
-              fontSize: 16, fontWeight: 800, fontFamily: "Nunito",
-              boxShadow: "0 4px 20px rgba(79,70,229,0.4)",
-            }}>{connecting ? "Connecting..." : "Join Room →"}</button>
+              width: "100%",
+              background: connecting ? "rgba(255,255,255,0.07)" : "linear-gradient(135deg,#4f46e5,#7c3aed)",
+              color: connecting ? "#4b5563" : "#fff",
+              border: "none", borderRadius: 14, padding: "15px",
+              fontSize: 16, fontWeight: 900, fontFamily: "Nunito", cursor: connecting ? "default" : "pointer",
+              boxShadow: connecting ? "none" : "0 6px 24px rgba(79,70,229,0.45)",
+              transition: "all 0.2s",
+            }}>
+              {connecting ? "Connecting…" : "Join Room →"}
+            </button>
           </form>
         )}
 
         {tab === "host" && (
           <form onSubmit={handleCreate}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ color: "#9ca3af", fontSize: 12, fontWeight: 700, display: "block", marginBottom: 6 }}>
-                ADMIN PASSWORD
-              </label>
+            <Field label="ADMIN PASSWORD">
               <input value={password} onChange={e => setPassword(e.target.value)}
-                type="password" placeholder="Your secret password..."
-                style={{
-                  width: "100%", background: "#1f2937", border: "1.5px solid #374151",
-                  borderRadius: 12, padding: "12px 16px", color: "#f9fafb", fontSize: 15,
-                  fontFamily: "Nunito", transition: "border 0.2s",
-                }}
-                onFocus={e => e.target.style.border = "1.5px solid #6366f1"}
-                onBlur={e => e.target.style.border = "1.5px solid #374151"}
+                type="password" placeholder="Your server admin password…"
+                style={inputBase}
+                onFocus={e => { e.target.style.border = "1.5px solid rgba(99,102,241,0.7)"; e.target.style.background = "rgba(99,102,241,0.08)"; }}
+                onBlur={e => { e.target.style.border = "1.5px solid rgba(255,255,255,0.1)"; e.target.style.background = "rgba(255,255,255,0.05)"; }}
               />
-              <div style={{ color: "#4b5563", fontSize: 11, marginTop: 4 }}>
-                This is the password you set in your server's ADMIN_PASSWORD env variable
+              <div style={{ color: "#1f2a40", fontSize: 11, marginTop: 4 }}>
+                Set in your server's ADMIN_PASSWORD env variable
               </div>
-            </div>
+            </Field>
 
-            {/* Settings */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ color: "#9ca3af", fontSize: 11, fontWeight: 700, display: "block", marginBottom: 5 }}>
-                  MERCY LIMIT
-                </label>
+            <Field label="MERCY LIMIT">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <input type="number" value={mercyLimit} min={10} max={50}
                   onChange={e => setMercyLimit(Number(e.target.value))}
                   style={{
-                    width: "100%", background: "#1f2937", border: "1.5px solid #374151",
-                    borderRadius: 10, padding: "10px 12px", color: "#f9fafb",
-                    fontSize: 16, fontFamily: "Fredoka One", textAlign: "center",
+                    ...inputBase, width: 90, fontSize: 22,
+                    fontFamily: "'Fredoka One', cursive", textAlign: "center",
+                    padding: "10px 8px",
                   }}
                 />
+                <div style={{ color: "#4b5563", fontSize: 11, lineHeight: 1.4 }}>
+                  Cards before<br />elimination
+                </div>
               </div>
+            </Field>
 
-            </div>
-
-            {error && <div style={{ color: "#ef4444", fontSize: 13, marginBottom: 12, textAlign: "center" }}>{error}</div>}
+            {error && (
+              <div style={{
+                color: "#fca5a5", fontSize: 12, marginBottom: 12, textAlign: "center",
+                background: "rgba(239,68,68,0.1)", borderRadius: 8, padding: "6px 12px",
+                border: "1px solid rgba(239,68,68,0.3)",
+              }}>{error}</div>
+            )}
             <button type="submit" disabled={connecting} style={{
-              width: "100%", background: "linear-gradient(135deg, #f59e0b, #ef4444)",
-              color: "#fff", border: "none", borderRadius: 14, padding: "14px",
-              fontSize: 16, fontWeight: 800, fontFamily: "Nunito",
-              boxShadow: "0 4px 20px rgba(239,68,68,0.4)",
-            }}>{connecting ? "Creating..." : "👑 Create Room"}</button>
+              width: "100%",
+              background: connecting ? "rgba(255,255,255,0.07)" : "linear-gradient(135deg,#d97706,#ef4444)",
+              color: connecting ? "#4b5563" : "#fff",
+              border: "none", borderRadius: 14, padding: "15px",
+              fontSize: 16, fontWeight: 900, fontFamily: "Nunito", cursor: connecting ? "default" : "pointer",
+              boxShadow: connecting ? "none" : "0 6px 24px rgba(239,68,68,0.4)",
+              transition: "all 0.2s",
+            }}>
+              {connecting ? "Creating…" : "👑 Create Room"}
+            </button>
           </form>
         )}
       </div>
 
-      <div style={{ color: "#1f2937", fontSize: 10, marginTop: 20 }}>
+      <div style={{ color: "#0d1320", fontSize: 10, marginTop: 20, position: "relative", zIndex: 1 }}>
         Fan game · UNO® is a trademark of Mattel
       </div>
     </div>
