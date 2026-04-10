@@ -142,23 +142,15 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     } else {
       // First tap = select
       // Allow multi-select of same number
-      if (card.type === "number" || card.type === "seven" || card.type === "zero") {
-        if (selected.length > 0) {
-          const firstCard = me.hand.find(c => c.id === selected[0]);
-          // same value & type: stack numbers/sevens/zeros
-          if (firstCard?.value === card.value && firstCard?.type === card.type) {
-            setSelected(s => [...s, card.id]);
-            return;
-          }
-        }
-      } else if (getDrawStrength(card) > 0) {
-        if (selected.length > 0) {
-          const firstCard = me.hand.find(c => c.id === selected[0]);
-          // batch draw cards together
-          if (getDrawStrength(firstCard) > 0) {
-            setSelected(s => [...s, card.id]);
-            return;
-          }
+      if (selected.length > 0) {
+        const firstCard = me.hand.find(c => c.id === selected[0]);
+        // same value (numbers, action cards — skip+skip, reverse+reverse, etc.)
+        const sameValue = firstCard?.value === card.value;
+        // draw chain escalation: any draw card can stack onto another draw card
+        const bothDraw = getDrawStrength(card) > 0 && getDrawStrength(firstCard) > 0;
+        if (sameValue || bothDraw) {
+          setSelected(s => [...s, card.id]);
+          return;
         }
       }
       setSelected([card.id]);
