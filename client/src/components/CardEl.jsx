@@ -11,8 +11,8 @@ export const COLOR_MAP = {
 export function cardLabel(card) {
   const m = {
     draw2: "+2", draw4: "+4", draw6: "+6", draw10: "+10",
-    reverseDraw4: "R+4", skip: "⊘", reverse: "↺",
-    skipAll: "⊘⊘", discardAll: "DA", wild: "W",
+    reverseDraw4: "R+4", skip: "⊘", reverse: "⇄",
+    skipAll: "↺", discardAll: "DA", wild: "W",
     roulette: "??", "7": "7", "0": "0",
   };
   return m[card.value] || card.value;

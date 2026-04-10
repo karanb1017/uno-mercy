@@ -107,6 +107,12 @@ function drawCardsFromDeck(state, playerId, count) {
   let deck = [...state.deck];
   let discard = [...state.discard];
 
+  // Proactive reshuffle when deck runs low (<=70)
+  if (deck.length <= 70 && discard.length > 1) {
+    deck = [...deck, ...shuffle(discard.slice(0, -1))];
+    discard = [discard[discard.length - 1]];
+  }
+
   if (deck.length < count) {
     const eliminatedCards = state.players
       .filter(p => p.eliminated)
@@ -137,8 +143,12 @@ function canPlayCard(card, state) {
   if (chainActive && stack > 0) {
     const strength = getDrawStrength(card);
     const chainRequiredDraw = state.chainRequiredDraw || 0;
-    // Draw cards can stack if strong enough
-    if (strength > 0 && strength >= chainRequiredDraw) return true;
+    // Draw cards can stack if strong enough; colored ones must also match current color
+    if (strength > 0 && strength >= chainRequiredDraw) {
+      if (card.color === "wild") return true;
+      if (card.color === color) return true;
+      return false;
+    }
     // Saving actions: same color OR same symbol as top discard card
     if (card.value === "skip" || card.value === "reverse" || card.value === "skipAll") {
       if (card.color === color) return true;
@@ -469,9 +479,9 @@ function processDiscardAll(state, playerId, cardIds) {
   return { ...ns, currentPlayer: next };
 }
 
-// processRoulette: apply cached revealedCards to target, advance turn
+// processRoulette: apply cached revealedCards to target, skip target's turn, set color
 function processRoulette(state) {
-  const { targetPlayer, initiator, revealedCards } = state.pendingAction;
+  const { targetPlayer, initiator, revealedCards, chosenColor } = state.pendingAction;
 
   const newHand = [...state.players[targetPlayer].hand, ...revealedCards];
   const limit = state.settings.mercyLimit;
@@ -484,13 +494,15 @@ function processRoulette(state) {
     players: newPlayers,
     phase: "play",
     pendingAction: null,
+    currentColor: chosenColor || state.currentColor,
     log: [...state.log, `🎲 ${state.players[targetPlayer].name} drew ${revealedCards.length} cards from roulette!`]
   };
 
   const alive = getAlive(newPlayers);
   if (alive.length === 1) return { ...ns, winner: alive[0].id, phase: "end" };
 
-  const next = nextPlayerIdx(ns.players, initiator, ns.direction);
+  // Target's turn is skipped — next player after the target
+  const next = nextPlayerIdx(newPlayers, targetPlayer, ns.direction);
   return { ...ns, currentPlayer: next };
 }
 

@@ -120,7 +120,12 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
         (card.draws === 4 || card.value === "draw4") ? 4 :
         (card.draws === 6 || card.value === "draw6") ? 6 :
         (card.draws === 10 || card.value === "draw10") ? 10 : 0;
-      if (str > 0 && str >= chainRequiredDraw) return true;
+      if (str > 0 && str >= chainRequiredDraw) {
+        // Wild cards counter any color chain; colored draw cards must match current color
+        if (card.color === "wild") return true;
+        if (card.color === color) return true;
+        return false;
+      }
       if (card.value === "skip" || card.value === "reverse" || card.value === "skipAll") {
         if (card.color === color) return true;
         if (top && card.value === top.value) return true;
@@ -138,32 +143,32 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       const cards = (me?.hand || []).filter(c => pendingWild.includes(c.id));
       if (cards.some(c => c.value === "roulette")) return [];
     }
-    if (!state.chainActive || !state.colorStack?.length) return [];
+    if (!state.chainActive || !state.colorStack?.length) return [state.currentColor];
     return [...new Set([...state.colorStack, state.currentColor])];
   }
 
   function handleCardClick(card) {
     if (!isMyTurn || state.phase !== "play") return;
-    if (!canPlayCard(card)) return;
 
     if (selected.includes(card.id)) {
       // Second tap = play
       handlePlaySelected([...selected]);
-    } else {
-      // First tap = select
-      // Allow multi-select of same number
-      if (selected.length > 0) {
-        const firstCard = me.hand.find(c => c.id === selected[0]);
-        // 0, 7, discardAll, roulette are always played alone
-        const noStack = ["0", "7", "discardAll", "roulette"];
-        // Same value/symbol only — +2+2 ✓, skip+skip ✓, +2+4 ✗
-        if (!noStack.includes(card.value) && firstCard?.value === card.value) {
-          setSelected(s => [...s, card.id]);
-          return;
-        }
-      }
-      setSelected([card.id]);
+      return;
     }
+
+    // Adding to existing selection — bypass canPlayCard, only same-value check
+    if (selected.length > 0) {
+      const firstCard = me.hand.find(c => c.id === selected[0]);
+      const noStack = ["0", "7", "discardAll", "roulette"];
+      if (!noStack.includes(card.value) && firstCard?.value === card.value) {
+        setSelected(s => [...s, card.id]);
+        return;
+      }
+    }
+
+    // Starting new selection — must be individually playable
+    if (!canPlayCard(card)) return;
+    setSelected([card.id]);
   }
 
   function handlePlaySelected(cardIds = selected) {
@@ -507,12 +512,17 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
                 {(me?.hand || []).map(card => {
                   const playable = canPlayCard(card);
                   const isSel = selected.includes(card.id);
+                  const noStack = ["0", "7", "discardAll", "roulette"];
+                  const firstSel = selected.length > 0 ? me.hand.find(c => c.id === selected[0]) : null;
+                  const isMultiAddable = isMyTurn && !isSel && firstSel &&
+                    !noStack.includes(card.value) && card.value === firstSel.value;
+                  const isClickable = playable || isMultiAddable;
                   return (
                     <CardEl key={card.id} card={card} size={52}
                       selected={isSel}
-                      playable={playable || !isMyTurn}
-                      onClick={playable ? () => handleCardClick(card) : undefined}
-                      style={{ cursor: playable && isMyTurn ? "pointer" : "not-allowed" }}
+                      playable={playable || !isMyTurn || isMultiAddable}
+                      onClick={isClickable ? () => handleCardClick(card) : undefined}
+                      style={{ cursor: isClickable && isMyTurn ? "pointer" : "not-allowed" }}
                     />
                   );
                 })}
