@@ -14,9 +14,12 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   const [unoCountdown, setUnoCountdown] = useState(4);
   const [log, setLog] = useState(state.log || []);
   const [chatMsg, setChatMsg] = useState("");
-  const [chat, setChat] = useState([]);
+  const [chat, setChat] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`chat_${roomCode}`)) || []; } catch { return []; }
+  });
   const [showChat, setShowChat] = useState(false);
   const [rouletteData, setRouletteData] = useState(null);
+  const chatKey = `chat_${roomCode}`;
   const logRef = useRef(null);
   const chatRef = useRef(null);
   const unoTimerRef = useRef(null);
@@ -36,7 +39,11 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   // Chat
   useEffect(() => {
     const handler = (msg) => {
-      setChat(c => [...c, msg]);
+      setChat(c => {
+        const updated = [...c, msg];
+        try { localStorage.setItem(chatKey, JSON.stringify(updated.slice(-200))); } catch {}
+        return updated;
+      });
       if (chatRef.current) setTimeout(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, 50);
     };
     socket.on("chatMessage", handler);
