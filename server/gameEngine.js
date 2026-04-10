@@ -139,8 +139,11 @@ function canPlayCard(card, state) {
     const chainRequiredDraw = state.chainRequiredDraw || 0;
     // Draw cards can stack if strong enough
     if (strength > 0 && strength >= chainRequiredDraw) return true;
-    // Same-color saving actions (skip/reverse/skipAll) can deflect chain
-    if (card.color === color && (card.value === "skip" || card.value === "reverse" || card.value === "skipAll")) return true;
+    // Saving actions: same color OR same symbol as top discard card
+    if (card.value === "skip" || card.value === "reverse" || card.value === "skipAll") {
+      if (card.color === color) return true;
+      if (top && card.value === top.value) return true;
+    }
     return false;
   }
 
@@ -163,25 +166,22 @@ function canMultiPlay(cards, state) {
 
   const first = cards[0];
 
-  // Same numeric value across any colors (numbers, sevens, zeros)
-  const numericTypes = ["number", "seven", "zero"];
-  if (numericTypes.includes(first.type) && cards.every(c => c.value === first.value)) {
-    return canPlayCard(first, state);
-  }
+  // ALL cards must be the exact same symbol/value (no mixing +2+4, skip+reverse, etc.)
+  if (!cards.every(c => c.value === first.value)) return false;
 
-  // Multiple draw cards: all must meet chain requirement; outside chain first must be playable
-  const allDraw = cards.every(c => getDrawStrength(c) > 0);
-  if (allDraw) {
-    if (!canPlayCard(first, state)) return false;
-    if (state.chainActive && state.drawStack > 0) {
+  // First card must be individually playable
+  if (!canPlayCard(first, state)) return false;
+
+  // During chain: draw cards must all meet the minimum strength
+  if (state.chainActive && state.drawStack > 0) {
+    const str = getDrawStrength(first);
+    if (str > 0) {
       const req = state.chainRequiredDraw || 0;
-      return cards.every(c => getDrawStrength(c) >= req);
+      return str >= req;
     }
-    return true;
   }
 
-  // Multiple action cards: all must be individually playable
-  return cards.every(c => canPlayCard(c, state));
+  return true;
 }
 
 // ─── MAIN PLAY FUNCTION ───────────────────────────────────────
@@ -254,7 +254,9 @@ function processPlay(state, playerId, cardIds, chosenColor) {
       reverseDraw4Count++;
     } else if (card.value === "skip") {
       if (wasChainActive) {
-        hasSavingAction = true; // deflects chain, does NOT skip next player
+        // First skip deflects; each additional skip adds an extra hop to pass chain further
+        if (hasSavingAction) skipCount++;
+        hasSavingAction = true;
       } else {
         skipCount++;
       }
@@ -358,7 +360,8 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   let next = nextPlayerIdx(ns.players, playerId, dir);
 
   if (hasSkipAll) {
-    next = nextPlayerIdx(ns.players, playerId, -dir);
+    // During chain: bounce to previous player (who sent chain); normally: your turn again
+    next = wasChainActive ? nextPlayerIdx(ns.players, playerId, -dir) : playerId;
     ns = { ...ns, log: [...ns.log, "⦸⦸ Skip All!"] };
   } else {
     for (let i = 0; i < skipCount; i++) {

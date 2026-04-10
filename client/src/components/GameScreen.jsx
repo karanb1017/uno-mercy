@@ -121,7 +121,10 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
         (card.draws === 6 || card.value === "draw6") ? 6 :
         (card.draws === 10 || card.value === "draw10") ? 10 : 0;
       if (str > 0 && str >= chainRequiredDraw) return true;
-      if (card.color === color && (card.value === "skip" || card.value === "reverse" || card.value === "skipAll")) return true;
+      if (card.value === "skip" || card.value === "reverse" || card.value === "skipAll") {
+        if (card.color === color) return true;
+        if (top && card.value === top.value) return true;
+      }
       return false;
     }
     if (card.type === "wild" || card.type === "wildDraw" || card.type === "wildReverseDraw") return true;
@@ -151,11 +154,8 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       // Allow multi-select of same number
       if (selected.length > 0) {
         const firstCard = me.hand.find(c => c.id === selected[0]);
-        // same value (numbers, action cards — skip+skip, reverse+reverse, etc.)
-        const sameValue = firstCard?.value === card.value;
-        // draw chain escalation: any draw card can stack onto another draw card
-        const bothDraw = getDrawStrength(card) > 0 && getDrawStrength(firstCard) > 0;
-        if (sameValue || bothDraw) {
+        // Same value/symbol only — +2+2 ✓, skip+skip ✓, +2+4 ✗
+        if (firstCard?.value === card.value) {
           setSelected(s => [...s, card.id]);
           return;
         }
@@ -531,7 +531,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
                 </div>
               )}
               <div style={{ color: "#374151", fontSize: 10, textAlign: "center", marginTop: 6 }}>
-                Tap once to select · Tap again to play · Tap same number to multi-select
+                Tap once to select · Tap again to play · Same symbol = multi-select
               </div>
             </>
           )}
