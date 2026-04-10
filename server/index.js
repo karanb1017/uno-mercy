@@ -429,6 +429,16 @@ io.on("connection", (socket) => {
         room.host = socket.id;
       }
 
+      // Also update socketId in live game state so getPlayerView finds them
+      if (room.state) {
+        room.state = {
+          ...room.state,
+          players: room.state.players.map(p =>
+            p.socketId === oldSocketId ? { ...p, socketId: socket.id } : p
+          ),
+        };
+      }
+
       const isHost = room.host === socket.id;
       callback({ success: true, isHost });
       broadcastRoom(roomCode);
