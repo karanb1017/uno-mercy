@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const {
   initGame, processPlay, processDraw,
-  processSwap, processDiscardAll, processRoulette,
+  processSwap, processDiscardAll, processRoulette, processRoulettePickColor,
   getPlayerView, shuffle, canPlayCard, getDrawStrength,
 } = require("./gameEngine");
 
@@ -103,7 +103,8 @@ function computeBotMove(state, botIdx) {
     playable.find(c => getDrawStrength(c) > 0) ||
     playable[0];
 
-  const needsColor = pick.type === "wild" || pick.type === "wildDraw" || pick.type === "wildReverseDraw" || pick.value === "roulette";
+  const needsColor = pick.type === "wild" || pick.type === "wildDraw" || pick.type === "wildReverseDraw";
+  // roulette no longer needs initiator to pick color
   return { draw: false, cardIds: [pick.id], chosenColor: needsColor ? getBotBestColor(hand) : null };
 }
 
@@ -116,7 +117,12 @@ function maybeScheduleBot(roomCode) {
   if (state.phase === "play") actorId = state.currentPlayer;
   else if (state.phase === "swapHands") actorId = state.pendingAction?.playerId;
   else if (state.phase === "discardAll") actorId = state.pendingAction?.playerId;
-  else if (state.phase === "roulette") actorId = state.pendingAction?.initiator;
+  else if (state.phase === "roulette") {
+    const pa = state.pendingAction;
+    // Target picks color first; then initiator resolves
+    if (!pa?.chosenColor) actorId = pa?.targetPlayer;
+    else actorId = pa?.initiator;
+  }
 
   if (actorId === null || actorId === undefined) return;
   if (!room.players.find(p => p.id === actorId && p.isBot)) return;
@@ -141,8 +147,15 @@ function maybeScheduleBot(roomCode) {
         .filter(c => c.color === col && c.type === "number" && c.value !== "0" && c.value !== "7")
         .map(c => c.id);
       r.state = processDiscardAll(s, actorId, eligible);
-    } else if (s.phase === "roulette" && s.pendingAction?.initiator === actorId) {
-      r.state = processRoulette(s);
+    } else if (s.phase === "roulette") {
+      const pa = s.pendingAction;
+      if (!pa.chosenColor && room.players.find(p => p.id === pa.targetPlayer && p.isBot)) {
+        // Bot target picks best color
+        const targetHand = s.players[pa.targetPlayer].hand;
+        r.state = processRoulettePickColor(s, getBotBestColor(targetHand));
+      } else if (pa.chosenColor && pa.revealedCards?.length >= 0 && room.players.find(p => p.id === pa.initiator && p.isBot)) {
+        r.state = processRoulette(s);
+      }
     }
 
     broadcastRoom(roomCode);
@@ -281,6 +294,18 @@ io.on("connection", (socket) => {
 
     room.state = processDiscardAll(room.state, playerIdx, cardIds || []);
     clearTurnTimer(roomCode);
+    broadcastRoom(roomCode);
+    maybeScheduleBot(roomCode);
+  });
+
+  // ── Roulette: target chooses color ──────────────────────
+  socket.on("rouletteChooseColor", ({ roomCode, color }) => {
+    const room = rooms[roomCode];
+    if (!room?.state || room.state.phase !== "roulette") return;
+    if (room.state.pendingAction?.chosenColor) return;
+    const playerIdx = room.players.findIndex(p => p.socketId === socket.id);
+    if (playerIdx !== room.state.pendingAction?.targetPlayer) return;
+    room.state = processRoulettePickColor(room.state, color);
     broadcastRoom(roomCode);
     maybeScheduleBot(roomCode);
   });

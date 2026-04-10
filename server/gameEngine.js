@@ -309,38 +309,13 @@ function processPlay(state, playerId, cardIds, chosenColor) {
 
   // ── Special phases ────────────────────────────────────────
 
-  // Roulette: run immediately, store revealed cards so client can animate
+  // Roulette: enter phase so TARGET can pick the color
   if (hasRoulette) {
     const target = nextPlayerIdx(ns.players, playerId, dir);
-    let rDeck = [...ns.deck];
-    let rDiscard = [...ns.discard];
-    const revealedCards = [];
-
-    while (rDeck.length > 0) {
-      const card = rDeck.shift();
-      revealedCards.push(card);
-      if (card.color === finalColor) break;
-      if (revealedCards.length > 40) break;
-    }
-
-    // Reshuffle if deck ran out before hitting the color
-    if (revealedCards[revealedCards.length - 1]?.color !== finalColor && rDeck.length === 0) {
-      const reshuffled = shuffle(rDiscard.slice(0, -1));
-      rDeck = [...reshuffled];
-      rDiscard = [rDiscard[rDiscard.length - 1]];
-      while (rDeck.length > 0) {
-        const card = rDeck.shift();
-        revealedCards.push(card);
-        if (card.color === finalColor) break;
-      }
-    }
-
     return {
       ...ns,
-      deck: rDeck,
-      discard: rDiscard,
       phase: "roulette",
-      pendingAction: { type: "roulette", chosenColor: finalColor, targetPlayer: target, initiator: playerId, revealedCards }
+      pendingAction: { type: "roulette", chosenColor: null, targetPlayer: target, initiator: playerId, revealedCards: [] }
     };
   }
 
@@ -349,7 +324,7 @@ function processPlay(state, playerId, cardIds, chosenColor) {
     return {
       ...ns,
       phase: "discardAll",
-      pendingAction: { type: "discardAll", color: discardAllColor, playerId }
+      pendingAction: { type: "discardAll", color: discardAllColor, playerId, hadOtherCards: newHand.length > 0 }
     };
   }
 
@@ -417,14 +392,6 @@ function processPlay(state, playerId, cardIds, chosenColor) {
 function processDraw(state, playerId) {
   if (state.currentPlayer !== playerId) return { error: "Not your turn" };
 
-  // Forced play: during an active chain the player must use a valid card
-  if (state.chainActive && state.drawStack > 0) {
-    const p = state.players[playerId];
-    if (p.hand.some(c => canPlayCard(c, state))) {
-      return { error: "You must play a valid card — you cannot draw when you have a valid move during a chain" };
-    }
-  }
-
   const player = state.players[playerId];
   const amount = state.drawStack > 0 ? state.drawStack : 1;
 
@@ -481,8 +448,8 @@ function processDiscardAll(state, playerId, cardIds) {
   );
   const newHand = player.hand.filter(c => !toDiscard.map(x => x.id).includes(c.id));
 
-  // Win: DiscardAll empties the hand AND at least one card was discarded
-  if (newHand.length === 0 && toDiscard.length > 0) {
+  // Win: DiscardAll empties the hand AND player had other cards before (not standalone)
+  if (newHand.length === 0 && toDiscard.length > 0 && state.pendingAction?.hadOtherCards) {
     return {
       ...state,
       phase: "end",
@@ -507,8 +474,7 @@ function processDiscardAll(state, playerId, cardIds) {
   return { ...ns, currentPlayer: next };
 }
 
-// processRoulette: cards were already drawn and stored in pendingAction.revealedCards
-// when roulette was played. This just applies them to the target and advances the turn.
+// processRoulette: apply cached revealedCards to target, advance turn
 function processRoulette(state) {
   const { targetPlayer, initiator, revealedCards } = state.pendingAction;
 
@@ -531,6 +497,37 @@ function processRoulette(state) {
 
   const next = nextPlayerIdx(ns.players, initiator, ns.direction);
   return { ...ns, currentPlayer: next };
+}
+
+function processRoulettePickColor(state, color) {
+  let rDeck = [...state.deck];
+  let rDiscard = [...state.discard];
+  const revealedCards = [];
+
+  function drawUntilColor() {
+    while (rDeck.length > 0 && revealedCards.length < 40) {
+      const card = rDeck.shift();
+      revealedCards.push(card);
+      if (card.color === color) break;
+    }
+  }
+
+  drawUntilColor();
+
+  // Reshuffle discard if deck ran out before finding the color
+  if (revealedCards[revealedCards.length - 1]?.color !== color && rDeck.length === 0) {
+    const reshuffled = shuffle(rDiscard.slice(0, -1));
+    rDeck = [...reshuffled];
+    rDiscard = [rDiscard[rDiscard.length - 1]];
+    drawUntilColor();
+  }
+
+  return {
+    ...state,
+    deck: rDeck,
+    discard: rDiscard,
+    pendingAction: { ...state.pendingAction, chosenColor: color, revealedCards }
+  };
 }
 
 // ─── INIT GAME ────────────────────────────────────────────────
@@ -609,6 +606,7 @@ module.exports = {
   processSwap,
   processDiscardAll,
   processRoulette,
+  processRoulettePickColor,
   getPlayerView,
   canPlayCard,
   getDrawStrength,

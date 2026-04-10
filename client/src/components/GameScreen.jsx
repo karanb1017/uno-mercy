@@ -25,7 +25,6 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   const me = state.players[myIndex];
   const isMyTurn = state.currentPlayer === myIndex && !me?.eliminated;
   const topCard = state.discard?.[state.discard.length - 1];
-  const hasForcedPlay = isMyTurn && state.phase === "play" && state.chainActive && state.drawStack > 0 && (me?.hand || []).some(c => canPlayCard(c));
   const cm = COLOR_MAP[state.currentColor] || COLOR_MAP.red;
 
   // Sync log
@@ -44,14 +43,14 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     return () => socket.off("chatMessage", handler);
   }, [socket]);
 
-  // Roulette state
+  // Sync roulette data
   useEffect(() => {
     if (state.phase === "roulette" && state.pendingAction) {
       setRouletteData(state.pendingAction);
     } else {
       setRouletteData(null);
     }
-  }, [state.phase]);
+  }, [state.phase, state.pendingAction?.chosenColor, state.pendingAction?.revealedCards?.length]);
 
   // UNO window logic
   useEffect(() => {
@@ -89,6 +88,14 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       setCatchWindowOpen(false);
     }
   }, [state.players, state.currentPlayer, catchWindowOpen, myIndex]);
+
+  function getDrawStrength(card) {
+    if (card.value === "draw2") return 2;
+    if (card.value === "draw4") return 4;
+    if (card.draws === 6 || card.value === "draw6") return 6;
+    if (card.draws === 10 || card.value === "draw10") return 10;
+    return 0;
+  }
 
   function canPlayCard(card) {
     if (!isMyTurn) return false;
@@ -138,7 +145,17 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       if (card.type === "number" || card.type === "seven" || card.type === "zero") {
         if (selected.length > 0) {
           const firstCard = me.hand.find(c => c.id === selected[0]);
+          // same value & type: stack numbers/sevens/zeros
           if (firstCard?.value === card.value && firstCard?.type === card.type) {
+            setSelected(s => [...s, card.id]);
+            return;
+          }
+        }
+      } else if (getDrawStrength(card) > 0) {
+        if (selected.length > 0) {
+          const firstCard = me.hand.find(c => c.id === selected[0]);
+          // batch draw cards together
+          if (getDrawStrength(firstCard) > 0) {
             setSelected(s => [...s, card.id]);
             return;
           }
@@ -153,7 +170,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
     const cards = me.hand.filter(c => cardIds.includes(c.id));
     const needsColor = cards.some(c =>
       c.type === "wild" || c.type === "wildDraw" ||
-      c.type === "wildReverseDraw" || c.value === "roulette"
+      c.type === "wildReverseDraw"
     );
     if (needsColor) {
       setPendingWild(cardIds);
@@ -171,7 +188,6 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
 
   function handleDraw() {
     if (!isMyTurn || state.phase !== "play") return;
-    if (hasForcedPlay) return;
     socket.emit("drawCard", { roomCode });
     setSelected([]);
   }
@@ -213,6 +229,9 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
   }
 
   const isRoulette = state.phase === "roulette";
+  const isRouletteColorPick = isRoulette &&
+    state.pendingAction?.targetPlayer === myIndex &&
+    !state.pendingAction?.chosenColor;
   const isSwap = state.phase === "swapHands" && state.pendingAction?.playerId === myIndex;
   const isDiscardAll = state.phase === "discardAll" && state.pendingAction?.playerId === myIndex;
 
@@ -232,6 +251,13 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       {pendingWild && (
         <ColorPicker onPick={handleColorChosen} exclude={getColorExclusions()} />
       )}
+      {isRouletteColorPick && (
+        <ColorPicker
+          onPick={(color) => { socket.emit("rouletteChooseColor", { roomCode, color }); }}
+          exclude={[]}
+          title="You were hit by Roulette! Pick a color — you'll draw until you get it."
+        />
+      )}
       {isSwap && (
         <SwapModal players={state.players} myId={myIndex} onSwap={handleSwap} />
       )}
@@ -243,7 +269,7 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
           onSkip={() => handleDiscardAll([])}
         />
       )}
-      {isRoulette && rouletteData && (
+      {isRoulette && rouletteData && rouletteData.revealedCards?.length > 0 && (
         <RouletteModal
           targetName={state.players[rouletteData.targetPlayer]?.name}
           chosenColor={rouletteData.chosenColor}
@@ -401,9 +427,9 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
           {/* Draw pile */}
           <div style={{ position: "relative" }}>
             <div
-              onClick={isMyTurn && state.phase === "play" && !hasForcedPlay ? handleDraw : undefined}
-              title={isMyTurn && hasForcedPlay ? "Must play a card!" : isMyTurn ? "Click to draw" : ""}
-              style={{ cursor: isMyTurn && state.phase === "play" && !hasForcedPlay ? "pointer" : "not-allowed" }}
+              onClick={isMyTurn && state.phase === "play" ? handleDraw : undefined}
+              title={isMyTurn ? "Click to draw" : ""}
+              style={{ cursor: isMyTurn && state.phase === "play" ? "pointer" : "not-allowed" }}
             >
               <CardEl card={{ id: "back", color: "wild", value: "?" }} faceDown size={68}
                 style={{ filter: isMyTurn ? "drop-shadow(0 0 10px rgba(59,130,246,0.5))" : "none" }}
