@@ -161,8 +161,8 @@ function canMultiPlay(cards, state) {
   if (cards.length === 0) return false;
   if (cards.length === 1) return canPlayCard(cards[0], state);
 
-  // Roulette must always be played alone
-  if (cards.some(c => c.value === "roulette")) return false;
+  // These cards have unique one-time effects — always played alone
+  if (cards.some(c => c.value === "roulette" || c.value === "discardAll" || c.value === "0" || c.value === "7")) return false;
 
   const first = cards[0];
 
@@ -262,10 +262,8 @@ function processPlay(state, playerId, cardIds, chosenColor) {
       }
     } else if (card.value === "reverse") {
       reverseCount++;
-      if (wasChainActive) hasSavingAction = true;
     } else if (card.value === "skipAll") {
       hasSkipAll = true;
-      if (wasChainActive) hasSavingAction = true;
     } else if (card.value === "wild") {
       finalColor = chosenColor || finalColor;
       needsColorPick = true;
@@ -370,12 +368,6 @@ function processPlay(state, playerId, cardIds, chosenColor) {
   }
 
   ns = { ...ns, currentPlayer: next };
-
-  // 2-card penalty for deflecting a chain with a saving action card
-  if (hasSavingAction) {
-    ns = drawCardsFromDeck(ns, playerId, 2);
-    ns = { ...ns, log: [...ns.log, `${player.name} draws 2 penalty (deflected chain)`] };
-  }
 
   // ── Elimination check ─────────────────────────────────────
   const newPlayers = checkEliminations(ns.players, ns.settings.mercyLimit);

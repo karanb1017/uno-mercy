@@ -154,8 +154,10 @@ export default function GameScreen({ state, myIndex, isHost, roomCode, socket, o
       // Allow multi-select of same number
       if (selected.length > 0) {
         const firstCard = me.hand.find(c => c.id === selected[0]);
+        // 0, 7, discardAll, roulette are always played alone
+        const noStack = ["0", "7", "discardAll", "roulette"];
         // Same value/symbol only — +2+2 ✓, skip+skip ✓, +2+4 ✗
-        if (firstCard?.value === card.value) {
+        if (!noStack.includes(card.value) && firstCard?.value === card.value) {
           setSelected(s => [...s, card.id]);
           return;
         }
