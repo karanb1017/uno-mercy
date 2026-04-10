@@ -10,7 +10,11 @@ const COLORS = ["red", "blue", "green", "yellow"];
 //   2×0(zero), 2×1-6(number), 2×7(seven/swap), 2×8-9(number)  = 20  → ×4 = 80
 //   3×skip, 3×reverse, 3×draw2, 2×skipAll, 3×discardAll        = 14  → ×4 = 56
 //   Subtotal color: 34 × 4 = 136
-// Wild: 8×draw4, 8×reverseDraw4, 4×draw6, 4×draw10, 8×roulette = 32
+// Per color (×4):
+//   2×0, 2×1-9 (7=seven/swap) = 20 → ×4 = 80
+//   3×skip, 3×reverse, 3×draw2, 2×draw4, 2×skipAll, 3×discardAll = 16 → ×4 = 64 (subtotal color: 144... wait)
+// Per color: 20 numbers + 3skip+3rev+3draw2+2draw4+2skipAll+3discardAll = 20+16 = 36 × 4 = 144
+// Wild: 8×reverseDraw4, 4×draw6, 4×draw10, 8×roulette = 24
 // Total: 168 cards
 function createDeck() {
   const d = [];
@@ -32,6 +36,9 @@ function createDeck() {
       d.push(mk(c, a, "action"));
       d.push(mk(c, a, "action"));
     }
+    // 2x draw4 (colored)
+    d.push(mk(c, "draw4", "action", { draws: 4 }));
+    d.push(mk(c, "draw4", "action", { draws: 4 }));
     // 2x skip all
     d.push(mk(c, "skipAll", "action"));
     d.push(mk(c, "skipAll", "action"));
@@ -41,9 +48,8 @@ function createDeck() {
     d.push(mk(c, "discardAll", "action"));
   }
 
-  // 8x draw4, 8x reverseDraw4
+  // 8x reverseDraw4 (wild)
   for (let i = 0; i < 8; i++) {
-    d.push(mk("wild", "draw4",       "wildDraw",        { draws: 4 }));
     d.push(mk("wild", "reverseDraw4","wildReverseDraw",  { draws: 4 }));
   }
   // 4x draw6, 4x draw10
@@ -69,6 +75,7 @@ function shuffle(arr) {
 // Draw card strength for stacking hierarchy (+2 < +4 < +6 < +10)
 function getDrawStrength(card) {
   if (card.value === "draw2") return 2;
+  if (card.value === "draw4") return 4;
   if (card.type === "wildDraw" || card.type === "wildReverseDraw") return card.draws || 0;
   return 0;
 }
@@ -128,15 +135,11 @@ function canPlayCard(card, state) {
   if (card.value === "roulette") return !chainActive && stack === 0;
 
   if (chainActive && stack > 0) {
-    // During draw chain: draw cards can always stack
-    const isDrawCard =
-      card.type === "wildDraw" ||
-      card.type === "wildReverseDraw" ||
-      card.value === "draw2";
-    if (isDrawCard) return true;
-
-    // Same-color action cards can be played during chain
-    if (card.color === color && card.type === "action") return true;
+    const strength = getDrawStrength(card);
+    const chainRequiredDraw = state.chainRequiredDraw || 0;
+    // Draw cards can stack if strong enough
+    if (strength > 0 && strength >= chainRequiredDraw) return true;
+    // Same-color saving actions (skip/reverse/skipAll) can deflect chain
     if (card.color === color && (card.value === "skip" || card.value === "reverse" || card.value === "skipAll")) return true;
     return false;
   }
@@ -230,6 +233,10 @@ function processPlay(state, playerId, cardIds, chosenColor) {
       stack += 2;
       chainActive = true;
       chainRequiredDraw = Math.max(chainRequiredDraw, 2);
+    } else if (card.value === "draw4" && card.type === "action") {
+      stack += 4;
+      chainActive = true;
+      chainRequiredDraw = Math.max(chainRequiredDraw, 4);
     } else if (card.type === "wildDraw") {
       stack += card.draws;
       chainActive = true;
