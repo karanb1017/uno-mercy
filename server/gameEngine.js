@@ -1,6 +1,6 @@
 // ============================================================
 // UNO SHOW 'EM NO MERCY — COMPLETE GAME ENGINE
-// 168-card deck, all house rules implemented
+// 132-card deck, all house rules implemented
 // ============================================================
 
 const COLORS = ["red", "blue", "green", "yellow"];
